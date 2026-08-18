@@ -1,5 +1,6 @@
 SESSION_SECRET=replace-with-a-long-random-string
 PAYMENT_PROVIDER=mock
+TOSS_MODE=test
 ENVIRONMENT=development
 TOSS_CLIENT_KEY=
 TOSS_SECRET_KEY=

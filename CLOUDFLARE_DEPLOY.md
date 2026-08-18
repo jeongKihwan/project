@@ -23,16 +23,23 @@ Cloudflare Dashboard의 `Workers & Pages > review-insight > Settings > Variables
 
 ```text
 SESSION_SECRET
-PAYMENT_PROVIDER=toss
 TOSS_CLIENT_KEY
 TOSS_SECRET_KEY
 OPENAI_API_KEY
-OPENAI_MODEL=gpt-5.4-mini
-TURNSTILE_SITE_KEY
 TURNSTILE_SECRET
 ```
 
-`TOSS_CLIENT_KEY`, `TURNSTILE_SITE_KEY`, `OPENAI_MODEL`은 일반 Variable로 등록할 수 있습니다. `TOSS_SECRET_KEY`, `OPENAI_API_KEY`, `SESSION_SECRET`, `TURNSTILE_SECRET`는 반드시 Secret입니다.
+`TOSS_CLIENT_KEY`는 브라우저 공개 키지만 운영 편의를 위해 Secret으로 등록해도 됩니다. `TOSS_SECRET_KEY`, `OPENAI_API_KEY`, `SESSION_SECRET`, `TURNSTILE_SECRET`는 반드시 Secret입니다.
+
+`wrangler.toml`의 일반 Variable은 아래처럼 사용합니다.
+
+```text
+PAYMENT_PROVIDER=toss
+TOSS_MODE=test
+ENVIRONMENT=production
+```
+
+테스트 완료 후 라이브 키를 등록할 때만 `TOSS_MODE=live`로 변경합니다. 테스트 키와 라이브 키를 섞으면 서버가 결제를 차단합니다.
 
 ## 4. 배포
 
