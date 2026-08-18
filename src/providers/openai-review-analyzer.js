@@ -79,6 +79,9 @@ export async function analyzeWithOpenAI(reviews, env) {
     }),
   });
   const body = await response.json();
-  if (!response.ok) throw new Error(`OPENAI_REQUEST_FAILED_${response.status}`);
+  if (!response.ok) {
+    const code = String(body.error?.code || body.error?.type || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
+    throw new Error(`OPENAI_REQUEST_FAILED_${response.status}_${code}`);
+  }
   return normalize(JSON.parse(outputText(body)), reviewMap, reviews.length);
 }
