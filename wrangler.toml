@@ -13,5 +13,6 @@ database_name = "review-insight-db"
 database_id = "f17a0b3a-aec9-4e64-a333-8ce0da57be19"
 
 # Dashboard 또는 `wrangler secret put`으로 설정:
-# SESSION_SECRET, TOSS_SECRET_KEY, TOSS_CLIENT_KEY, AI_API_KEY,
+# SESSION_SECRET, TOSS_SECRET_KEY, TOSS_CLIENT_KEY, OPENAI_API_KEY,
 # TURNSTILE_SECRET, TURNSTILE_SITE_KEY, PAYMENT_PROVIDER
+# 일반 변수 권장값: OPENAI_MODEL=gpt-5.4-mini
