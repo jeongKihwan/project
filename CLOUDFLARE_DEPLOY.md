@@ -21,6 +21,8 @@ npm run db:migrate:remote
 
 Cloudflare Dashboard의 `Workers & Pages > review-insight > Settings > Variables and Secrets`에 아래 값을 Secret으로 추가합니다.
 
+`wrangler.toml`의 `keep_vars = true`는 Dashboard에서 등록한 Secret이 다음 배포 때 제거되지 않도록 유지합니다. 이 설정을 삭제하지 않습니다.
+
 ```text
 SESSION_SECRET
 PADDLE_CLIENT_TOKEN
