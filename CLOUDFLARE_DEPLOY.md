@@ -23,23 +23,32 @@ Cloudflare Dashboard의 `Workers & Pages > review-insight > Settings > Variables
 
 ```text
 SESSION_SECRET
-TOSS_CLIENT_KEY
-TOSS_SECRET_KEY
+PADDLE_CLIENT_TOKEN
+PADDLE_WEBHOOK_SECRET
 OPENAI_API_KEY
 TURNSTILE_SECRET
 ```
 
-`TOSS_CLIENT_KEY`는 브라우저 공개 키지만 운영 편의를 위해 Secret으로 등록해도 됩니다. `TOSS_SECRET_KEY`, `OPENAI_API_KEY`, `SESSION_SECRET`, `TURNSTILE_SECRET`는 반드시 Secret입니다.
+`PADDLE_CLIENT_TOKEN`은 브라우저 공개 토큰이지만 운영 편의를 위해 Secret으로 등록해도 됩니다. `PADDLE_WEBHOOK_SECRET`, `OPENAI_API_KEY`, `SESSION_SECRET`, `TURNSTILE_SECRET`는 반드시 Secret입니다.
 
 `wrangler.toml`의 일반 Variable은 아래처럼 사용합니다.
 
 ```text
-PAYMENT_PROVIDER=toss
-TOSS_MODE=test
+PAYMENT_PROVIDER=paddle
+PADDLE_MODE=sandbox
+PADDLE_PRICE_IDS={"starter":"pri_...","growth":"pri_...","pro":"pri_..."}
 ENVIRONMENT=production
 ```
 
-테스트 완료 후 라이브 키를 등록할 때만 `TOSS_MODE=live`로 변경합니다. 테스트 키와 라이브 키를 섞으면 서버가 결제를 차단합니다.
+Paddle Sandbox에서 일회성 상품 가격 3개를 만든 뒤 각 `pri_` 값을 `PADDLE_PRICE_IDS`에 넣습니다. 테스트 완료 후 라이브 토큰·price ID·웹훅 secret을 등록할 때만 `PADDLE_MODE=live`로 변경합니다. Sandbox와 Live 값을 섞으면 서버가 결제를 차단합니다.
+
+Paddle 알림 목적지 URL:
+
+```text
+https://review-insight.jkh7531.workers.dev/api/webhooks/paddle
+```
+
+이 목적지에서 `transaction.completed` 이벤트를 활성화합니다.
 
 ## 4. 배포
 
@@ -51,11 +60,9 @@ npm run deploy
 
 ## 5. 운영 도메인·결제
 
-Workers 프로젝트의 `Settings > Domains & Routes`에서 Custom Domain을 추가합니다. Toss 성공·실패 URL도 새 도메인으로 변경합니다.
+Workers 프로젝트의 `Settings > Domains & Routes`에서 Custom Domain을 추가합니다. Paddle의 승인 도메인과 기본 결제 링크도 새 도메인으로 변경합니다.
 
 ```text
 https://YOUR_DOMAIN/payment-success.html
-https://YOUR_DOMAIN/payment-fail.html
+https://YOUR_DOMAIN/payment.html
 ```
-
-Toss 라이브 키는 테스트 결제 전체 검증 뒤에만 설정합니다.
