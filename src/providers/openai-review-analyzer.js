@@ -54,12 +54,13 @@ function normalize(raw, reviewMap, totalReviews) {
 }
 
 export async function analyzeWithOpenAI(reviews, env) {
-  if (!env.OPENAI_API_KEY) throw new Error('OPENAI_NOT_CONFIGURED');
+  const apiKey = env.OPENAI_API_KEY || env.openai_api_key;
+  if (!apiKey) throw new Error('OPENAI_NOT_CONFIGURED');
   const selected = sampleReviews(reviews).map((text, index) => ({ id: `R${index + 1}`, text: String(text).slice(0, MAX_REVIEW_LENGTH) }));
   const reviewMap = new Map(selected.map((review) => [review.id, review.text]));
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: env.OPENAI_MODEL || DEFAULT_MODEL,
       store: false,
