@@ -5,10 +5,11 @@
 ```bash
 npx wrangler login
 npx wrangler d1 create review-insight-db
-npx wrangler r2 bucket create review-insight-uploads
 ```
 
 첫 명령의 브라우저 로그인 후 D1 생성 결과에서 `database_id`를 복사해 `wrangler.toml`의 `REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID`를 바꿉니다.
+
+원본 CSV는 Worker 메모리에서 개인정보 정제·분석 후 폐기하므로 R2에 저장하지 않습니다.
 
 ## 2. DB 생성
 

@@ -10,11 +10,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "review-insight-db"
-database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
-
-[[r2_buckets]]
-binding = "REVIEW_UPLOADS"
-bucket_name = "review-insight-uploads"
+database_id = "f17a0b3a-aec9-4e64-a333-8ce0da57be19"
 
 # Dashboard 또는 `wrangler secret put`으로 설정:
 # SESSION_SECRET, TOSS_SECRET_KEY, TOSS_CLIENT_KEY, AI_API_KEY,
