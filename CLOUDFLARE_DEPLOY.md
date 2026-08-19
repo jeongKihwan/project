@@ -15,6 +15,8 @@ npx wrangler d1 create review-insight-db
 
 ```bash
 npm run db:migrate:remote
+npm run db:migrate:payment:remote
+npm run db:migrate:subscription:remote
 ```
 
 ## 3. Production Secret 등록
@@ -42,7 +44,7 @@ PADDLE_PRICE_IDS={"starter":"pri_...","growth":"pri_...","pro":"pri_..."}
 ENVIRONMENT=production
 ```
 
-Paddle Sandbox에서 일회성 상품 가격 3개를 만든 뒤 각 `pri_` 값을 `PADDLE_PRICE_IDS`에 넣습니다. 테스트 완료 후 라이브 토큰·price ID·웹훅 secret을 등록할 때만 `PADDLE_MODE=live`로 변경합니다. Sandbox와 Live 값을 섞으면 서버가 결제를 차단합니다.
+Paddle Sandbox 또는 Live에서 Starter, Growth, Pro의 월간 반복 가격 `pri_` 값을 `PADDLE_PRICE_IDS`에 넣습니다. 상품과 가격은 서비스 코드에서 생성·수정·삭제하지 않습니다. 테스트 완료 후 라이브 토큰·price ID·웹훅 secret을 등록할 때만 `PADDLE_MODE=live`로 변경합니다. Sandbox와 Live 값을 섞으면 서버가 결제를 차단합니다.
 
 Paddle 알림 목적지 URL:
 
@@ -50,7 +52,7 @@ Paddle 알림 목적지 URL:
 https://review-insight.jkh7531.workers.dev/api/webhooks/paddle
 ```
 
-이 목적지에서 `transaction.completed` 이벤트를 활성화합니다.
+이 목적지에서 `transaction.completed`와 `subscription.*` 이벤트를 활성화합니다. 결제 완료 후 Paddle의 실제 billing period가 확인되어야 유료 플랜이 활성화됩니다.
 
 ## 4. 배포
 

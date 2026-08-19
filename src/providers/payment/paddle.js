@@ -14,6 +14,11 @@ function priceMap(env) {
   }
 }
 
+export function planForPaddlePrice(env, priceId) {
+  const match = Object.entries(priceMap(env)).find(([planId, mappedPriceId]) => ['starter', 'growth', 'pro'].includes(planId) && mappedPriceId === priceId);
+  return match?.[0] || null;
+}
+
 export function paddleCheckoutConfig(env, planId) {
   const mode = env.PADDLE_MODE || 'sandbox';
   const clientToken = String(env.PADDLE_CLIENT_TOKEN || '');
@@ -48,13 +53,33 @@ export async function parsePaddleWebhook(request, env) {
   }
   if (!verified) throw new Error('PADDLE_WEBHOOK_SIGNATURE_INVALID');
   const event = JSON.parse(rawBody);
-  if (event.event_type !== 'transaction.completed') return { type: 'ignored' };
-  if (event.data?.status !== 'completed') throw new Error('PADDLE_TRANSACTION_NOT_COMPLETED');
-  return {
-    type: 'completed',
-    paymentId: String(event.data?.custom_data?.payment_id || ''),
-    paymentToken: String(event.data?.custom_data?.payment_token || ''),
-    providerPaymentId: String(event.data?.id || ''),
+  const common = {
+    eventId: String(event.event_id || ''),
+    eventType: String(event.event_type || ''),
+    occurredAt: String(event.occurred_at || ''),
+    periodStart: String(event.data?.current_billing_period?.starts_at || event.data?.billing_period?.starts_at || ''),
+    periodEnd: String(event.data?.current_billing_period?.ends_at || event.data?.billing_period?.ends_at || ''),
     items: (event.data?.items || []).map((item) => ({ priceId: String(item.price?.id || ''), quantity: Number(item.quantity || 0) })),
   };
+  if (event.event_type === 'transaction.completed') {
+    if (event.data?.status !== 'completed') throw new Error('PADDLE_TRANSACTION_NOT_COMPLETED');
+    return {
+      ...common,
+      type: 'completed',
+      paymentId: String(event.data?.custom_data?.payment_id || ''),
+      paymentToken: String(event.data?.custom_data?.payment_token || ''),
+      providerPaymentId: String(event.data?.id || ''),
+      providerSubscriptionId: String(event.data?.subscription_id || ''),
+    };
+  }
+  if (String(event.event_type || '').startsWith('subscription.')) {
+    return {
+      ...common,
+      type: 'subscription',
+      providerSubscriptionId: String(event.data?.id || ''),
+      subscriptionStatus: String(event.data?.status || '').toUpperCase(),
+      cancelAtPeriodEnd: event.data?.scheduled_change?.action === 'cancel',
+    };
+  }
+  return { ...common, type: 'ignored' };
 }

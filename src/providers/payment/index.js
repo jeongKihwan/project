@@ -1,5 +1,5 @@
 import { confirmMockPayment, mockCheckoutConfig } from './mock.js';
-import { paddleCheckoutConfig, parsePaddleWebhook } from './paddle.js';
+import { paddleCheckoutConfig, parsePaddleWebhook, planForPaddlePrice } from './paddle.js';
 import { confirmTossPayment, tossCheckoutConfig } from './toss.js';
 
 export function paymentCheckoutConfig(env, planId) {
@@ -18,4 +18,9 @@ export async function confirmPayment(payment, input, env) {
 export async function parsePaymentWebhook(request, env) {
   if (env.PAYMENT_PROVIDER === 'paddle') return parsePaddleWebhook(request, env);
   throw new Error('PAYMENT_WEBHOOK_NOT_CONFIGURED');
+}
+
+export function planForPaymentPrice(env, priceId) {
+  if (env.PAYMENT_PROVIDER === 'paddle') return planForPaddlePrice(env, priceId);
+  return null;
 }

@@ -23,12 +23,23 @@ test('sandbox checkout config rejects live token', () => {
 });
 
 test('completed webhook requires valid signature and returns verified fields', async () => {
-  const body = JSON.stringify({ event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, status: 'completed', custom_data: { payment_id: 'payment-id', payment_token: 'payment-token' }, items: [{ quantity: 1, price: { id: priceId } }] } });
+  const body = JSON.stringify({ event_id: `evt_${'e'.repeat(26)}`, event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, status: 'completed', subscription_id: `sub_${'s'.repeat(26)}`, billing_period: { starts_at: '2026-08-01T00:00:00Z', ends_at: '2026-09-01T00:00:00Z' }, custom_data: { payment_id: 'payment-id', payment_token: 'payment-token' }, items: [{ quantity: 1, price: { id: priceId } }] } });
   const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });
   assert.equal(event.type, 'completed');
   assert.equal(event.paymentId, 'payment-id');
   assert.equal(event.paymentToken, 'payment-token');
+  assert.equal(event.providerSubscriptionId, `sub_${'s'.repeat(26)}`);
+  assert.equal(event.periodEnd, '2026-09-01T00:00:00Z');
   assert.deepEqual(event.items, [{ priceId, quantity: 1 }]);
+});
+
+test('subscription update exposes billing period and mapped item', async () => {
+  const body = JSON.stringify({ event_id: `evt_${'u'.repeat(26)}`, event_type: 'subscription.updated', data: { id: `sub_${'s'.repeat(26)}`, status: 'active', current_billing_period: { starts_at: '2026-08-01T00:00:00Z', ends_at: '2026-09-01T00:00:00Z' }, scheduled_change: { action: 'cancel' }, items: [{ quantity: 1, price: { id: priceId } }] } });
+  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });
+  assert.equal(event.type, 'subscription');
+  assert.equal(event.subscriptionStatus, 'ACTIVE');
+  assert.equal(event.cancelAtPeriodEnd, true);
+  assert.equal(event.items[0].priceId, priceId);
 });
 
 test('webhook rejects altered body', async () => {

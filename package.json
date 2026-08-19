@@ -4,12 +4,17 @@
   "private": true,
   "scripts": {
     "test": "node --test test/*.test.mjs",
+    "test:subscription-flow": "node test/subscription-flow.e2e.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:migrate:local": "wrangler d1 execute review-insight-db --local --file=./migrations/0001_initial.sql",
     "db:migrate:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0001_initial.sql",
     "db:migrate:payment:local": "wrangler d1 execute review-insight-db --local --file=./migrations/0002_payment_providers.sql",
     "db:migrate:payment:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0002_payment_providers.sql",
+    "db:migrate:subscription:local": "wrangler d1 execute review-insight-db --local --file=./migrations/0003_subscriptions_and_usage.sql",
+    "db:migrate:subscription:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0003_subscriptions_and_usage.sql",
+    "db:migrate:subscription-order:local": "wrangler d1 execute review-insight-db --local --file=./migrations/0004_subscription_event_order.sql",
+    "db:migrate:subscription-order:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0004_subscription_event_order.sql",
     "dev:local": "node server.js"
   },
   "devDependencies": { "wrangler": "^4.0.0" }

@@ -67,9 +67,24 @@
 .keyword-strip .keywords b { padding: 7px 9px; background: #fff; font-size: 11px; }
 .keyword-strip .keywords small { color: var(--green); margin-left: 4px; }
 .keyword-strip > small { color: var(--muted); }
+.usage-box { min-width: 230px; }
+.usage-box strong { display: block; }
+.usage-box strong b { font: inherit; }
+.usage-box small { display: block; color: var(--muted); font-size: 10px; }
+.plan-grid { grid-template-columns: repeat(4, 1fr); }
+.plan-card.current { border: 2px solid var(--green); }
+.plan-badge { display: inline-block; margin-bottom: 12px; color: var(--orange); font-size: 10px; font-weight: bold; }
+.plan-card button:disabled { cursor: not-allowed; background: #aeb5ad; }
+.locked-inline { width: 100%; padding: 35px; border: 1px dashed #b8bdb6; background: #f4f4ef; color: var(--muted); text-align: center; }
+.locked-upgrade { display: grid; grid-template-columns: auto 1fr auto; gap: 22px; align-items: center; margin-top: 30px; padding: 32px; background: #1f5745; color: #fff; }
+.locked-upgrade .lock-icon { font-size: 28px; }
+.locked-upgrade span { color: #c8ddce; font-size: 10px; font-weight: bold; letter-spacing: 1px; }
+.locked-upgrade h3 { margin: 6px 0; font: 22px 'Nanum Myeongjo'; }
+.locked-upgrade p { margin: 0; color: #dbe7de; font-size: 12px; }
+.locked-upgrade .primary-button { background: #fff; color: var(--green); white-space: nowrap; }
 
 @media (max-width: 760px) {
-  .signal-list, .page-copy-grid { grid-template-columns: 1fr; }
+  .signal-list, .page-copy-grid, .plan-grid { grid-template-columns: 1fr; }
   .result-section { padding: 24px 18px; margin-top: 40px; }
   .section-title { gap: 14px; }
   .sentiment-legend { flex-direction: column; gap: 8px; }
@@ -77,4 +92,5 @@
   .page-copy-card.headline { grid-column: auto; }
   .keyword-strip { align-items: flex-start; flex-direction: column; }
   .insight-banner { align-items: flex-start; flex-wrap: wrap; }
+  .locked-upgrade { grid-template-columns: 1fr; }
 }
