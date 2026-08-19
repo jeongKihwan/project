@@ -46,6 +46,17 @@ test('completed webhook requires valid signature and returns verified fields', a
   assert.deepEqual(event.items, [{ priceId, quantity: 1 }]);
 });
 
+test('webhook accepts harmless whitespace around the destination secret', async () => {
+  const body = JSON.stringify({ event_id: `evt_${'w'.repeat(26)}`, event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, status: 'completed', subscription_id: `sub_${'s'.repeat(26)}`, billing_period: { starts_at: '2026-08-01T00:00:00Z', ends_at: '2026-09-01T00:00:00Z' }, custom_data: { payment_id: 'payment-id', payment_token: 'payment-token' }, items: [{ quantity: 1, price: { id: priceId } }] } });
+  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: '  webhook-secret\n' });
+  assert.equal(event.eventType, 'transaction.completed');
+});
+
+test('webhook distinguishes a missing signature header', async () => {
+  const request = new Request('https://example.com/api/webhooks/paddle', { method: 'POST', body: '{}' });
+  await assert.rejects(() => parsePaddleWebhook(request, { PADDLE_WEBHOOK_SECRET: 'webhook-secret' }), /PADDLE_WEBHOOK_SIGNATURE_MISSING/);
+});
+
 test('subscription update exposes billing period and mapped item', async () => {
   const body = JSON.stringify({ event_id: `evt_${'u'.repeat(26)}`, event_type: 'subscription.updated', data: { id: `sub_${'s'.repeat(26)}`, status: 'active', current_billing_period: { starts_at: '2026-08-01T00:00:00Z', ends_at: '2026-09-01T00:00:00Z' }, scheduled_change: { action: 'cancel' }, items: [{ quantity: 1, price: { id: priceId } }] } });
   const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });
@@ -59,5 +70,5 @@ test('webhook rejects altered body', async () => {
   const original = JSON.stringify({ event_type: 'transaction.completed', data: { status: 'completed' } });
   const request = await signedRequest(original);
   const altered = new Request(request.url, { method: 'POST', headers: request.headers, body: `${original} ` });
-  await assert.rejects(() => parsePaddleWebhook(altered, { PADDLE_WEBHOOK_SECRET: 'webhook-secret' }), /PADDLE_WEBHOOK_SIGNATURE_INVALID/);
+  await assert.rejects(() => parsePaddleWebhook(altered, { PADDLE_WEBHOOK_SECRET: 'webhook-secret' }), /PADDLE_WEBHOOK_SIGNATURE_MISMATCH/);
 });

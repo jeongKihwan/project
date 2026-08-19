@@ -40,9 +40,12 @@ export function paddleCheckoutConfig(env, planId) {
 }
 
 export async function parsePaddleWebhook(request, env) {
-  if (!env.PADDLE_WEBHOOK_SECRET) throw new Error('PADDLE_WEBHOOK_SECRET_MISSING');
+  const webhookSecret = String(env.PADDLE_WEBHOOK_SECRET || '').trim();
+  if (!webhookSecret) throw new Error('PADDLE_WEBHOOK_SECRET_MISSING');
+  if (env.PADDLE_MODE === 'sandbox' && !webhookSecret.startsWith('pdl_ntfset_')) throw new Error('PADDLE_WEBHOOK_SECRET_FORMAT_INVALID');
   const rawBody = await request.text();
   const signatureHeader = request.headers.get('Paddle-Signature') || '';
+  if (!signatureHeader) throw new Error('PADDLE_WEBHOOK_SIGNATURE_MISSING');
   const signatures = { ts: [], h1: [] };
   for (const part of signatureHeader.split(';')) {
     const separator = part.indexOf('=');
@@ -51,15 +54,17 @@ export async function parsePaddleWebhook(request, env) {
     if (signatures[key]) signatures[key].push(part.slice(separator + 1).trim());
   }
   const timestamp = Number(signatures.ts[0]);
-  if (!Number.isFinite(timestamp) || Math.abs(Math.floor(Date.now() / 1000) - timestamp) > 300) throw new Error('PADDLE_WEBHOOK_TIMESTAMP_INVALID');
-  const key = await crypto.subtle.importKey('raw', encoder.encode(env.PADDLE_WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+  if (!Number.isFinite(timestamp)) throw new Error('PADDLE_WEBHOOK_TIMESTAMP_MISSING');
+  if (Math.abs(Math.floor(Date.now() / 1000) - timestamp) > 300) throw new Error('PADDLE_WEBHOOK_TIMESTAMP_EXPIRED');
+  if (!signatures.h1.some((candidate) => /^[a-f0-9]{64}$/i.test(candidate))) throw new Error('PADDLE_WEBHOOK_H1_MISSING');
+  const key = await crypto.subtle.importKey('raw', encoder.encode(webhookSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
   const payload = encoder.encode(`${timestamp}:${rawBody}`);
   let verified = false;
   for (const candidate of signatures.h1) {
     const bytes = hexToBytes(candidate);
     if (bytes && await crypto.subtle.verify('HMAC', key, bytes, payload)) { verified = true; break; }
   }
-  if (!verified) throw new Error('PADDLE_WEBHOOK_SIGNATURE_INVALID');
+  if (!verified) throw new Error('PADDLE_WEBHOOK_SIGNATURE_MISMATCH');
   const event = JSON.parse(rawBody);
   const common = {
     eventId: String(event.event_id || ''),
