@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { paddleCheckoutConfig, parsePaddleWebhook, updatePaddleSubscription } from '../src/providers/payment/paddle.js';
+import { applyPaymentWebhook } from '../src/subscriptions.js';
 
 const encoder = new TextEncoder();
 const priceId = `pri_${'a'.repeat(26)}`;
@@ -89,6 +90,25 @@ test('subscription update exposes billing period and mapped item', async () => {
   assert.equal(event.subscriptionStatus, 'ACTIVE');
   assert.equal(event.cancelAtPeriodEnd, true);
   assert.equal(event.items[0].priceId, priceId);
+});
+
+test('subscription proration transaction exposes its origin', async () => {
+  const body = JSON.stringify({ event_id: `evt_${'p'.repeat(26)}`, event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, origin: 'subscription_update', status: 'completed', subscription_id: `sub_${'s'.repeat(26)}`, custom_data: {}, items: [{ quantity: 1, price: { id: priceId } }, { quantity: 1, price: { id: priceId } }] } });
+  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });
+  assert.equal(event.origin, 'subscription_update');
+  assert.equal(event.items.length, 2);
+});
+
+test('subscription proration transaction is acknowledged without activating a payment', async () => {
+  const events = new Set();
+  const env = { DB: { prepare(sql) { return { bind(...args) { return {
+    first: async () => sql.startsWith('SELECT event_id') && events.has(args[0]) ? { event_id: args[0] } : null,
+    run: async () => { if (sql.startsWith('INSERT INTO payment_webhook_events')) events.add(args[0]); return { success: true }; },
+  }; } }; } } };
+  const eventId = `evt_${'q'.repeat(26)}`;
+  const result = await applyPaymentWebhook(env, { eventId, eventType: 'transaction.completed', type: 'completed', origin: 'subscription_update', items: [{ quantity: 1 }, { quantity: 1 }] });
+  assert.deepEqual(result, { ignored: true, reason: 'SUBSCRIPTION_UPDATE_TRANSACTION' });
+  assert.equal(events.has(eventId), true);
 });
 
 test('webhook rejects altered body', async () => {

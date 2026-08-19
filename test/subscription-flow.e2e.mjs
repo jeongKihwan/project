@@ -123,6 +123,15 @@ assert.equal(result.data.access.usage.limit, 50);
 
 result = await signedWebhook({
   event_id: providerId('evt'),
+  event_type: 'transaction.completed',
+  occurred_at: new Date(Date.now() - 18_000).toISOString(),
+  data: { id: providerId('txn'), origin: 'subscription_update', status: 'completed', subscription_id: ids.subscription, custom_data: {}, items: [{ quantity: 1, price: { id: ids.starterPrice } }, { quantity: 1, price: { id: ids.growthPrice } }] },
+});
+assert.equal(result.response.status, 200);
+assert.equal(result.data.reason, 'SUBSCRIPTION_UPDATE_TRANSACTION');
+
+result = await signedWebhook({
+  event_id: providerId('evt'),
   event_type: 'subscription.canceled',
   occurred_at: canceledAt,
   data: { id: ids.subscription, status: 'canceled', current_billing_period: { starts_at: periodStart, ends_at: periodEnd }, scheduled_change: null, items: [{ quantity: 1, price: { id: ids.growthPrice } }] },

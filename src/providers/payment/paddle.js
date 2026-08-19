@@ -95,6 +95,7 @@ export async function parsePaddleWebhook(request, env) {
     eventId: String(event.event_id || ''),
     eventType: String(event.event_type || ''),
     occurredAt: String(event.occurred_at || ''),
+    origin: String(event.data?.origin || ''),
     periodStart: String(event.data?.current_billing_period?.starts_at || event.data?.billing_period?.starts_at || ''),
     periodEnd: String(event.data?.current_billing_period?.ends_at || event.data?.billing_period?.ends_at || ''),
     items: (event.data?.items || []).map((item) => {

@@ -17,8 +17,11 @@ function validPeriod(start, end) {
   return Number.isFinite(startAt) && Number.isFinite(endAt) && startAt < endAt;
 }
 
-function validEvent(event) {
+function validEventId(event) {
   if (!/^[A-Za-z0-9_-]{6,80}$/.test(event.eventId || '')) throw new Error('PADDLE_EVENT_ID_INVALID');
+}
+
+function validItems(event) {
   if (event.items.length !== 1 || event.items[0].quantity !== 1) throw new Error('PADDLE_ITEMS_INVALID');
 }
 
@@ -28,8 +31,17 @@ async function duplicateEvent(env, eventId) {
 
 export async function applyPaymentWebhook(env, event) {
   if (event.type === 'ignored') return { ignored: true };
-  validEvent(event);
+  validEventId(event);
   if (await duplicateEvent(env, event.eventId)) return { duplicate: true };
+
+  // A prorated subscription change creates a separate multi-line transaction.
+  // subscription.updated is the authority for access; acknowledge this event.
+  if (event.type === 'completed' && event.origin === 'subscription_update') {
+    await env.DB.prepare('INSERT INTO payment_webhook_events (event_id,event_type,processed_at) VALUES (?,?,?)').bind(event.eventId, event.eventType, now()).run();
+    return { ignored: true, reason: 'SUBSCRIPTION_UPDATE_TRANSACTION' };
+  }
+
+  validItems(event);
 
   if (event.type === 'completed') {
     if (!/^[0-9a-f-]{36}$/i.test(event.paymentId)) throw new Error('PADDLE_PAYMENT_ID_INVALID');
