@@ -6,7 +6,6 @@ keep_vars = true
 [vars]
 PAYMENT_PROVIDER = "paddle"
 PADDLE_MODE = "sandbox"
-PADDLE_PRICE_IDS = "{}"
 ENVIRONMENT = "production"
 
 [assets]
@@ -20,6 +19,7 @@ database_name = "review-insight-db"
 database_id = "f17a0b3a-aec9-4e64-a333-8ce0da57be19"
 
 # Dashboard 또는 `wrangler secret put`으로 설정:
-# SESSION_SECRET, PADDLE_CLIENT_TOKEN, PADDLE_WEBHOOK_SECRET, OPENAI_API_KEY,
+# SESSION_SECRET, PADDLE_CLIENT_TOKEN, PADDLE_WEBHOOK_SECRET,
+# PADDLE_STARTER_PRICE_ID, PADDLE_GROWTH_PRICE_ID, PADDLE_PRO_PRICE_ID, OPENAI_API_KEY,
 # TURNSTILE_SECRET, TURNSTILE_SITE_KEY
 # 일반 변수 권장값: OPENAI_MODEL=gpt-5.4-mini

@@ -17,6 +17,8 @@ Cloudflare 운영 환경은 Paddle provider를 사용합니다. `PADDLE_MODE=san
 
 필수 Paddle 값이 모두 준비되기 전에는 요금제 버튼이 `결제 승인 대기 중`으로 비활성화됩니다. `/api/config`의 `paymentReady`로 배포 환경의 결제 준비 상태를 확인할 수 있습니다.
 
+Price ID는 `PADDLE_STARTER_PRICE_ID`, `PADDLE_GROWTH_PRICE_ID`, `PADDLE_PRO_PRICE_ID` 개별 Secret 등록을 권장합니다. 기존 `PADDLE_PRICE_IDS` JSON도 호환됩니다.
+
 ## 테스트
 
 ```bash

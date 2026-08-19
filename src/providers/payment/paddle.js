@@ -6,10 +6,18 @@ function hexToBytes(value) {
 }
 
 function priceMap(env) {
+  const individual = {
+    starter: String(env.PADDLE_STARTER_PRICE_ID || ''),
+    growth: String(env.PADDLE_GROWTH_PRICE_ID || ''),
+    pro: String(env.PADDLE_PRO_PRICE_ID || ''),
+  };
   try {
     const parsed = JSON.parse(env.PADDLE_PRICE_IDS || '{}');
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    const legacy = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    const overrides = Object.fromEntries(Object.entries(individual).filter(([, value]) => value));
+    return { ...legacy, ...overrides };
   } catch {
+    if (Object.values(individual).some(Boolean)) return individual;
     throw new Error('PADDLE_PRICE_MAP_INVALID');
   }
 }

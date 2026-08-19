@@ -18,6 +18,19 @@ test('sandbox checkout config accepts matching token and price', () => {
   assert.deepEqual(config, { clientToken: 'test_client_token', mode: 'sandbox', priceId });
 });
 
+test('sandbox checkout config accepts individual plan price secrets', () => {
+  const env = {
+    PADDLE_MODE: 'sandbox',
+    PADDLE_CLIENT_TOKEN: 'test_client_token',
+    PADDLE_STARTER_PRICE_ID: priceId,
+    PADDLE_GROWTH_PRICE_ID: `pri_${'b'.repeat(26)}`,
+    PADDLE_PRO_PRICE_ID: `pri_${'c'.repeat(26)}`,
+  };
+  assert.equal(paddleCheckoutConfig(env, 'starter').priceId, priceId);
+  assert.equal(paddleCheckoutConfig(env, 'growth').priceId, `pri_${'b'.repeat(26)}`);
+  assert.equal(paddleCheckoutConfig(env, 'pro').priceId, `pri_${'c'.repeat(26)}`);
+});
+
 test('sandbox checkout config rejects live token', () => {
   assert.throws(() => paddleCheckoutConfig({ PADDLE_MODE: 'sandbox', PADDLE_CLIENT_TOKEN: 'live_client_token', PADDLE_PRICE_IDS: JSON.stringify({ starter: priceId }) }, 'starter'), /PADDLE_MODE_MISMATCH/);
 });
