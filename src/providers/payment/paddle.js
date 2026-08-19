@@ -39,6 +39,31 @@ export function paddleCheckoutConfig(env, planId) {
   return { clientToken, mode, priceId };
 }
 
+export async function updatePaddleSubscription(env, { subscriptionId, priceId, prorationBillingMode }) {
+  if (!/^sub_[a-z0-9]{26}$/.test(subscriptionId || '')) throw new Error('PADDLE_SUBSCRIPTION_ID_INVALID');
+  if (!/^pri_[a-z0-9]{26}$/.test(priceId || '')) throw new Error('PADDLE_PRICE_ID_MISSING');
+  const allowedModes = new Set(['prorated_immediately', 'prorated_next_billing_period', 'full_immediately', 'full_next_billing_period', 'do_not_bill']);
+  if (!allowedModes.has(prorationBillingMode)) throw new Error('PADDLE_PRORATION_MODE_INVALID');
+  const apiKey = String(env.PADDLE_API_KEY || '').trim();
+  if (!apiKey) throw new Error('PADDLE_API_KEY_MISSING');
+  const mode = env.PADDLE_MODE || 'sandbox';
+  if (mode === 'sandbox' && !apiKey.includes('_sdbx_')) throw new Error('PADDLE_API_KEY_MODE_MISMATCH');
+  if (mode !== 'sandbox' && mode !== 'live') throw new Error('PADDLE_MODE_INVALID');
+  const baseUrl = mode === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
+  const response = await fetch(`${baseUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: [{ price_id: priceId, quantity: 1 }], proration_billing_mode: prorationBillingMode, on_payment_failure: 'prevent_change' }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const providerCode = String(payload.error?.code || 'request_failed').replace(/[^a-z0-9_]/gi, '_').toUpperCase();
+    throw new Error(`PADDLE_SUBSCRIPTION_UPDATE_${providerCode}`);
+  }
+  if (payload.data?.id !== subscriptionId) throw new Error('PADDLE_SUBSCRIPTION_UPDATE_RESPONSE_INVALID');
+  return { subscriptionId: payload.data.id, status: String(payload.data.status || '').toUpperCase(), priceId, prorationBillingMode };
+}
+
 export async function parsePaddleWebhook(request, env) {
   const webhookSecret = String(env.PADDLE_WEBHOOK_SECRET || '').trim();
   if (!webhookSecret) throw new Error('PADDLE_WEBHOOK_SECRET_MISSING');

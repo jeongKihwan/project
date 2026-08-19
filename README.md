@@ -19,6 +19,8 @@ Cloudflare 운영 환경은 Paddle provider를 사용합니다. `PADDLE_MODE=san
 
 Price ID는 `PADDLE_STARTER_PRICE_ID`, `PADDLE_GROWTH_PRICE_ID`, `PADDLE_PRO_PRICE_ID` 개별 Secret 등록을 권장합니다. 기존 `PADDLE_PRICE_IDS` JSON도 호환됩니다.
 
+기존 유료 구독의 플랜 변경은 새 Checkout을 만들지 않고 `PADDLE_API_KEY`로 Paddle Subscription API를 호출합니다. Sandbox API Key에는 `subscription.write` 권한이 필요하며, DB 플랜과 분석 한도는 서명된 `subscription.updated` Webhook이 도착한 뒤 갱신됩니다.
+
 ## 테스트
 
 ```bash

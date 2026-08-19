@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { paddleCheckoutConfig, parsePaddleWebhook } from '../src/providers/payment/paddle.js';
+import { paddleCheckoutConfig, parsePaddleWebhook, updatePaddleSubscription } from '../src/providers/payment/paddle.js';
 
 const encoder = new TextEncoder();
 const priceId = `pri_${'a'.repeat(26)}`;
@@ -33,6 +33,24 @@ test('sandbox checkout config accepts individual plan price secrets', () => {
 
 test('sandbox checkout config rejects live token', () => {
   assert.throws(() => paddleCheckoutConfig({ PADDLE_MODE: 'sandbox', PADDLE_CLIENT_TOKEN: 'live_client_token', PADDLE_PRICE_IDS: JSON.stringify({ starter: priceId }) }, 'starter'), /PADDLE_MODE_MISMATCH/);
+});
+
+test('paid plan change replaces the existing Sandbox subscription price', async () => {
+  const originalFetch = globalThis.fetch;
+  let captured;
+  globalThis.fetch = async (url, options) => {
+    captured = { url, options };
+    return new Response(JSON.stringify({ data: { id: `sub_${'s'.repeat(26)}`, status: 'active' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    const result = await updatePaddleSubscription({ PADDLE_MODE: 'sandbox', PADDLE_API_KEY: 'pdl_sdbx_apikey_test' }, { subscriptionId: `sub_${'s'.repeat(26)}`, priceId, prorationBillingMode: 'prorated_immediately' });
+    assert.equal(captured.url, `https://sandbox-api.paddle.com/subscriptions/sub_${'s'.repeat(26)}`);
+    assert.equal(captured.options.method, 'PATCH');
+    assert.deepEqual(JSON.parse(captured.options.body), { items: [{ price_id: priceId, quantity: 1 }], proration_billing_mode: 'prorated_immediately', on_payment_failure: 'prevent_change' });
+    assert.equal(result.status, 'ACTIVE');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('completed webhook requires valid signature and returns verified fields', async () => {
