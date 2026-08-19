@@ -128,7 +128,7 @@ result = await signedWebhook({
   data: { id: providerId('txn'), origin: 'subscription_update', status: 'completed', subscription_id: ids.subscription, custom_data: {}, items: [{ quantity: 1, price: { id: ids.starterPrice } }, { quantity: 1, price: { id: ids.growthPrice } }] },
 });
 assert.equal(result.response.status, 200);
-assert.equal(result.data.reason, 'SUBSCRIPTION_UPDATE_TRANSACTION');
+assert.equal(result.data.reason, 'SUBSCRIPTION_ADJUSTMENT_TRANSACTION');
 
 result = await signedWebhook({
   event_id: providerId('evt'),

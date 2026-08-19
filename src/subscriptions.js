@@ -35,10 +35,14 @@ export async function applyPaymentWebhook(env, event) {
   if (await duplicateEvent(env, event.eventId)) return { duplicate: true };
 
   // A prorated subscription change creates a separate multi-line transaction.
-  // subscription.updated is the authority for access; acknowledge this event.
-  if (event.type === 'completed' && event.origin === 'subscription_update') {
-    await env.DB.prepare('INSERT INTO payment_webhook_events (event_id,event_type,processed_at) VALUES (?,?,?)').bind(event.eventId, event.eventType, now()).run();
-    return { ignored: true, reason: 'SUBSCRIPTION_UPDATE_TRANSACTION' };
+  // Only acknowledge it when Paddle's subscription is already linked locally;
+  // subscription.updated remains the authority for the access change.
+  if (event.type === 'completed' && (event.items.length !== 1 || event.items[0].quantity !== 1) && /^sub_[a-z0-9]{26}$/.test(event.providerSubscriptionId || '')) {
+    const linked = await env.DB.prepare("SELECT user_id FROM subscriptions WHERE provider='paddle' AND provider_subscription_id=?").bind(event.providerSubscriptionId).first();
+    if (linked) {
+      await env.DB.prepare('INSERT INTO payment_webhook_events (event_id,event_type,processed_at) VALUES (?,?,?)').bind(event.eventId, event.eventType, now()).run();
+      return { ignored: true, reason: 'SUBSCRIPTION_ADJUSTMENT_TRANSACTION' };
+    }
   }
 
   validItems(event);

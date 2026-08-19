@@ -102,12 +102,12 @@ test('subscription proration transaction exposes its origin', async () => {
 test('subscription proration transaction is acknowledged without activating a payment', async () => {
   const events = new Set();
   const env = { DB: { prepare(sql) { return { bind(...args) { return {
-    first: async () => sql.startsWith('SELECT event_id') && events.has(args[0]) ? { event_id: args[0] } : null,
+    first: async () => sql.startsWith('SELECT event_id') ? (events.has(args[0]) ? { event_id: args[0] } : null) : (sql.startsWith('SELECT user_id FROM subscriptions') ? { user_id: 'linked-user' } : null),
     run: async () => { if (sql.startsWith('INSERT INTO payment_webhook_events')) events.add(args[0]); return { success: true }; },
   }; } }; } } };
   const eventId = `evt_${'q'.repeat(26)}`;
-  const result = await applyPaymentWebhook(env, { eventId, eventType: 'transaction.completed', type: 'completed', origin: 'subscription_update', items: [{ quantity: 1 }, { quantity: 1 }] });
-  assert.deepEqual(result, { ignored: true, reason: 'SUBSCRIPTION_UPDATE_TRANSACTION' });
+  const result = await applyPaymentWebhook(env, { eventId, eventType: 'transaction.completed', type: 'completed', origin: 'subscription_update', providerSubscriptionId: `sub_${'s'.repeat(26)}`, items: [{ quantity: 1 }, { quantity: 1 }] });
+  assert.deepEqual(result, { ignored: true, reason: 'SUBSCRIPTION_ADJUSTMENT_TRANSACTION' });
   assert.equal(events.has(eventId), true);
 });
 
