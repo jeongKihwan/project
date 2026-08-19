@@ -72,7 +72,11 @@ export async function parsePaddleWebhook(request, env) {
     occurredAt: String(event.occurred_at || ''),
     periodStart: String(event.data?.current_billing_period?.starts_at || event.data?.billing_period?.starts_at || ''),
     periodEnd: String(event.data?.current_billing_period?.ends_at || event.data?.billing_period?.ends_at || ''),
-    items: (event.data?.items || []).map((item) => ({ priceId: String(item.price?.id || ''), quantity: Number(item.quantity || 0) })),
+    items: (event.data?.items || []).map((item) => {
+      const parsed = { priceId: String(item.price?.id || ''), quantity: Number(item.quantity || 0) };
+      if (item.price && Object.prototype.hasOwnProperty.call(item.price, 'billing_cycle')) parsed.billingCycle = item.price.billing_cycle;
+      return parsed;
+    }),
   };
   if (event.event_type === 'transaction.completed') {
     if (event.data?.status !== 'completed') throw new Error('PADDLE_TRANSACTION_NOT_COMPLETED');

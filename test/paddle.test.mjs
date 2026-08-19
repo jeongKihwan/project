@@ -57,6 +57,13 @@ test('webhook distinguishes a missing signature header', async () => {
   await assert.rejects(() => parsePaddleWebhook(request, { PADDLE_WEBHOOK_SECRET: 'webhook-secret' }), /PADDLE_WEBHOOK_SIGNATURE_MISSING/);
 });
 
+test('completed webhook exposes a one-time price billing cycle', async () => {
+  const body = JSON.stringify({ event_id: `evt_${'o'.repeat(26)}`, event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, status: 'completed', subscription_id: null, billing_period: null, custom_data: { payment_id: 'payment-id', payment_token: 'payment-token' }, items: [{ quantity: 1, price: { id: priceId, billing_cycle: null } }] } });
+  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });
+  assert.equal(event.providerSubscriptionId, '');
+  assert.equal(event.items[0].billingCycle, null);
+});
+
 test('subscription update exposes billing period and mapped item', async () => {
   const body = JSON.stringify({ event_id: `evt_${'u'.repeat(26)}`, event_type: 'subscription.updated', data: { id: `sub_${'s'.repeat(26)}`, status: 'active', current_billing_period: { starts_at: '2026-08-01T00:00:00Z', ends_at: '2026-09-01T00:00:00Z' }, scheduled_change: { action: 'cancel' }, items: [{ quantity: 1, price: { id: priceId } }] } });
   const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });

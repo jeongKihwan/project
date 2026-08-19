@@ -32,14 +32,21 @@ export async function applyPaymentWebhook(env, event) {
   if (await duplicateEvent(env, event.eventId)) return { duplicate: true };
 
   if (event.type === 'completed') {
-    if (!/^[0-9a-f-]{36}$/i.test(event.paymentId) || !/^txn_[a-z0-9]{26}$/.test(event.providerPaymentId) || !/^sub_[a-z0-9]{26}$/.test(event.providerSubscriptionId)) throw new Error('PADDLE_TRANSACTION_INVALID');
+    if (!/^[0-9a-f-]{36}$/i.test(event.paymentId)) throw new Error('PADDLE_PAYMENT_ID_INVALID');
+    if (!/^txn_[a-z0-9]{26}$/.test(event.providerPaymentId)) throw new Error('PADDLE_TRANSACTION_ID_INVALID');
+    if (!event.providerSubscriptionId) {
+      if ('billingCycle' in event.items[0] && !event.items[0].billingCycle) throw new Error('PADDLE_ONE_TIME_PRICE_NOT_ALLOWED');
+      throw new Error('PADDLE_SUBSCRIPTION_ID_MISSING');
+    }
+    if (!/^sub_[a-z0-9]{26}$/.test(event.providerSubscriptionId)) throw new Error('PADDLE_SUBSCRIPTION_ID_INVALID');
     if (!validPeriod(event.periodStart, event.periodEnd)) throw new Error('PADDLE_BILLING_PERIOD_INVALID');
     const payment = await env.DB.prepare('SELECT payments.* FROM payments WHERE payments.id=?').bind(event.paymentId).first();
     if (!payment || payment.provider !== 'paddle') throw new Error('PAYMENT_NOT_FOUND');
     if (event.paymentToken !== await paymentToken(payment, env)) throw new Error('PAYMENT_TOKEN_INVALID');
     const priceId = event.items[0].priceId;
     const planId = planForPaymentPrice(env, priceId);
-    if (!planId || planId !== payment.plan_id || priceId !== payment.provider_price_id) throw new Error('PAYMENT_PLAN_MISMATCH');
+    if (!planId) throw new Error('PADDLE_PRICE_NOT_MAPPED');
+    if (planId !== payment.plan_id || priceId !== payment.provider_price_id) throw new Error('PAYMENT_PLAN_MISMATCH');
     try {
       await env.DB.batch([
         env.DB.prepare("UPDATE payments SET status='PAID',provider_payment_id=?,provider_subscription_id=?,billing_period_start=?,billing_period_end=?,credited_at=? WHERE id=? AND status='PENDING'").bind(event.providerPaymentId, event.providerSubscriptionId, event.periodStart, event.periodEnd, now(), payment.id),
