@@ -20,10 +20,12 @@ test('FREE preview returns only allowed result fields', () => {
   assert.equal(preview.strengths.length, 3);
   assert.equal(preview.weaknesses.length, 3);
   assert.equal(preview.priorities.length, 1);
-  assert.equal(preview.pageCopy.benefits.length, 2);
+  assert.equal(preview.pageCopy.headline.text, '헤드라인');
+  assert.equal(preview.pageCopy.benefits.length, 0);
   assert.equal(preview.pageCopy.anxietyRemovers.length, 0);
   assert.equal(preview.faq.length, 0);
   assert.equal(preview.keywords.length, 0);
+  assert.deepEqual(preview.lockedMeta, { prioritiesTotal: 3, pageCopyTotal: 5, faqTotal: 1 });
 });
 
 test('paid access receives original full result without regeneration', () => {

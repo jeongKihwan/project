@@ -58,7 +58,8 @@ export async function releaseAnalysisReservation(env, userId, requestId) {
 export function previewResult(result) {
   const legacyCopy = result.copy || [];
   const headline = result.pageCopy?.headline || (legacyCopy[0] ? { text: legacyCopy[0].text, evidence: legacyCopy[0].evidence || [] } : null);
-  const benefits = (result.pageCopy?.benefits || legacyCopy.slice(1).map((item) => ({ text: item.text, evidence: item.evidence || [] }))).slice(0, headline ? 2 : 3);
+  const benefits = result.pageCopy?.benefits || legacyCopy.slice(1).map((item) => ({ text: item.text, evidence: item.evidence || [] }));
+  const anxietyRemovers = result.pageCopy?.anxietyRemovers || [];
   const priorities = result.priorities || (result.purchasePoints || []).map((item, index) => ({ rank: index + 1, title: item.title, expectedEffect: item.reason, basis: item.reason, evidence: item.evidence || [] }));
   return {
     totalReviews: result.totalReviews,
@@ -68,9 +69,14 @@ export function previewResult(result) {
     strengths: (result.strengths || []).slice(0, 3),
     weaknesses: (result.weaknesses || []).slice(0, 3),
     priorities: priorities.slice(0, 1),
-    pageCopy: { headline, benefits, anxietyRemovers: [] },
+    pageCopy: { headline, benefits: headline ? [] : benefits.slice(0, 1), anxietyRemovers: [] },
     keywords: [],
     faq: [],
+    lockedMeta: {
+      prioritiesTotal: priorities.length,
+      pageCopyTotal: (headline ? 1 : 0) + benefits.length + anxietyRemovers.length,
+      faqTotal: (result.faq || []).length,
+    },
   };
 }
 
