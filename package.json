@@ -15,6 +15,8 @@
     "db:migrate:subscription:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0003_subscriptions_and_usage.sql",
     "db:migrate:subscription-order:local": "wrangler d1 execute review-insight-db --local --file=./migrations/0004_subscription_event_order.sql",
     "db:migrate:subscription-order:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0004_subscription_event_order.sql",
+    "db:migrate:plan-catalog:local": "wrangler d1 execute review-insight-db --local --file=./migrations/0005_plan_catalog.sql",
+    "db:migrate:plan-catalog:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0005_plan_catalog.sql",
     "dev:local": "node server.js"
   },
   "devDependencies": { "wrangler": "^4.0.0" }
