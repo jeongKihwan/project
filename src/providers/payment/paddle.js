@@ -7,9 +7,9 @@ function hexToBytes(value) {
 
 function priceMap(env) {
   return {
-    starter: String(env.PADDLE_STARTER_PRICE_ID || ''),
-    growth: String(env.PADDLE_GROWTH_PRICE_ID || ''),
-    pro: String(env.PADDLE_PRO_PRICE_ID || ''),
+    starter: String(env.PADDLE_STARTER_PRICE_ID || '').trim(),
+    growth: String(env.PADDLE_GROWTH_PRICE_ID || '').trim(),
+    pro: String(env.PADDLE_PRO_PRICE_ID || '').trim(),
   };
 }
 
@@ -20,7 +20,7 @@ export function planForPaddlePrice(env, priceId) {
 
 export function paddleCheckoutConfig(env, planId) {
   const mode = String(env.PADDLE_MODE || '');
-  const clientToken = String(env.PADDLE_CLIENT_TOKEN || '');
+  const clientToken = String(env.PADDLE_CLIENT_TOKEN || '').trim();
   if (!['sandbox', 'live'].includes(mode)) throw new Error('PADDLE_MODE_INVALID');
   if (!clientToken) throw new Error('PADDLE_CLIENT_TOKEN_MISSING');
   if (mode === 'sandbox' && !clientToken.startsWith('test_')) throw new Error('PADDLE_MODE_MISMATCH');
@@ -40,6 +40,18 @@ export function paddleApiKeyReady(env) {
 
 export function paddleWebhookReady(env) {
   return String(env.PADDLE_WEBHOOK_SECRET || '').trim().startsWith('pdl_ntfset_');
+}
+
+export function paddleLiveStatus(env) {
+  const prices = priceMap(env);
+  return {
+    clientToken: String(env.PADDLE_CLIENT_TOKEN || '').trim().startsWith('live_'),
+    apiKey: String(env.PADDLE_API_KEY || '').trim().includes('_live_'),
+    starterPrice: /^pri_[a-z0-9]{26}$/.test(prices.starter),
+    growthPrice: /^pri_[a-z0-9]{26}$/.test(prices.growth),
+    proPrice: /^pri_[a-z0-9]{26}$/.test(prices.pro),
+    webhookSecret: paddleWebhookReady(env),
+  };
 }
 
 export async function updatePaddleSubscription(env, { subscriptionId, priceId, prorationBillingMode }) {

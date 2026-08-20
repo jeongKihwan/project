@@ -1,5 +1,5 @@
 import { confirmMockPayment, mockCheckoutConfig } from './mock.js';
-import { paddleApiKeyReady, paddleCheckoutConfig, paddleWebhookReady, parsePaddleWebhook, planForPaddlePrice, updatePaddleSubscription } from './paddle.js';
+import { paddleApiKeyReady, paddleCheckoutConfig, paddleLiveStatus, paddleWebhookReady, parsePaddleWebhook, planForPaddlePrice, updatePaddleSubscription } from './paddle.js';
 import { confirmTossPayment, tossCheckoutConfig } from './toss.js';
 
 export function paymentCheckoutConfig(env, planId) {
@@ -36,4 +36,8 @@ export function paymentSubscriptionUpdateReady(env) {
 
 export function paymentWebhookReady(env) {
   return env.PAYMENT_PROVIDER === 'paddle' && paddleWebhookReady(env);
+}
+
+export function paymentEnvironmentStatus(env) {
+  return env.PAYMENT_PROVIDER === 'paddle' ? paddleLiveStatus(env) : {};
 }

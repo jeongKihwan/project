@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { paddleCheckoutConfig, paddleWebhookReady, parsePaddleWebhook, updatePaddleSubscription } from '../src/providers/payment/paddle.js';
+import { paddleCheckoutConfig, paddleLiveStatus, paddleWebhookReady, parsePaddleWebhook, updatePaddleSubscription } from '../src/providers/payment/paddle.js';
 import { applyPaymentWebhook } from '../src/subscriptions.js';
 
 const encoder = new TextEncoder();
@@ -46,6 +46,18 @@ test('live checkout requires explicit mode, live token, and individual price ID'
 test('webhook readiness accepts only a Paddle notification destination secret', () => {
   assert.equal(paddleWebhookReady({ PADDLE_WEBHOOK_SECRET: 'pdl_ntfset_live-secret' }), true);
   assert.equal(paddleWebhookReady({ PADDLE_WEBHOOK_SECRET: 'test-secret' }), false);
+});
+
+test('live status checks all six Paddle values without exposing them', () => {
+  const status = paddleLiveStatus({
+    PADDLE_CLIENT_TOKEN: ' live_client_token ',
+    PADDLE_API_KEY: ' pdl_live_apikey_test ',
+    PADDLE_STARTER_PRICE_ID: ` ${priceId} `,
+    PADDLE_GROWTH_PRICE_ID: `pri_${'b'.repeat(26)}`,
+    PADDLE_PRO_PRICE_ID: `pri_${'c'.repeat(26)}`,
+    PADDLE_WEBHOOK_SECRET: ' pdl_ntfset_live-secret ',
+  });
+  assert.deepEqual(status, { clientToken: true, apiKey: true, starterPrice: true, growthPrice: true, proPrice: true, webhookSecret: true });
 });
 
 test('paid plan change replaces the existing Sandbox subscription price', async () => {
