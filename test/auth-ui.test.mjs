@@ -15,3 +15,13 @@ test('login validation reports short passwords instead of silently blocking subm
   assert.match(source, /novalidate/);
   assert.match(source, /비밀번호는 8자 이상 입력해주세요/);
 });
+
+test('logout clears private results and rerenders pricing without the previous plan', () => {
+  assert.match(source, /else \{ \$\('#history-list'\)\.innerHTML = ''; \$\('#result'\)\.classList\.add\('hidden'\); \} await loadPlans\(\); bindActions\(\);/);
+  assert.match(source, /await refreshMe\(\); location\.hash = 'home'; toast\('로그아웃했습니다\.'\)/);
+});
+
+test('anonymous history navigation opens the login dialog', () => {
+  assert.match(source, /a\[href="#history"\]/);
+  assert.match(source, /if \(state\.user\) return; event\.preventDefault\(\); renderAuth\('login'\); \$\('#auth-dialog'\)\.showModal\(\)/);
+});
