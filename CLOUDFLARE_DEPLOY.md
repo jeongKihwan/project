@@ -43,11 +43,11 @@ TURNSTILE_SECRET
 
 ```text
 PAYMENT_PROVIDER=paddle
-PADDLE_MODE=sandbox
+PADDLE_MODE=live
 ENVIRONMENT=production
 ```
 
-Paddle Sandbox 또는 Live에서 Starter, Growth, Pro의 월간 반복 가격 `pri_` 값을 각 플랜 Secret에 넣습니다. 기존 `PADDLE_PRICE_IDS` JSON도 호환되지만 개별 Secret을 권장합니다. 상품과 가격은 서비스 코드에서 생성·수정·삭제하지 않습니다. 테스트 완료 후 라이브 토큰·price ID·웹훅 secret을 등록할 때만 `PADDLE_MODE=live`로 변경합니다. Sandbox와 Live 값을 섞으면 서버가 결제를 차단합니다.
+Paddle Live에서 Starter, Growth, Pro의 월간 반복 가격 `pri_` 값을 각 플랜 Secret에 넣습니다. 상품과 가격은 서비스 코드에서 생성·수정·삭제하지 않습니다. Live 토큰·API Key·Price ID·Webhook secret만 함께 사용하며 Sandbox 값이 섞이면 서버가 결제를 차단합니다.
 
 Paddle 알림 목적지 URL:
 

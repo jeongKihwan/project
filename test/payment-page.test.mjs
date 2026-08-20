@@ -15,10 +15,11 @@ test('payment inline script is valid JavaScript', () => {
   for (const script of scripts) assert.doesNotThrow(() => new vm.Script(script));
 });
 
-test('Sandbox checkout waits for Paddle and exposes click errors', () => {
-  assert.ok(publicPage.includes("paddle.Environment.set('sandbox')"));
-  assert.ok(publicPage.indexOf("paddle.Environment.set('sandbox')") < publicPage.indexOf('paddle.Initialize('));
-  assert.ok(publicPage.includes("startsWith('test_')"));
+test('Live checkout uses Paddle production default and exposes click errors', () => {
+  assert.ok(!publicPage.includes('Paddle.Environment.set'));
+  assert.ok(!publicPage.includes("startsWith('test_')"));
+  assert.ok(publicPage.includes("data.environment!=='live'"));
+  assert.ok(publicPage.includes("startsWith('live_')"));
   assert.ok(publicPage.includes("/^pri_[a-z0-9]{26}$/"));
   assert.ok(publicPage.includes("button.addEventListener('click'"));
   assert.ok(publicPage.includes('paddle.Checkout.open('));

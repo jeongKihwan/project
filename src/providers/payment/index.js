@@ -1,5 +1,5 @@
 import { confirmMockPayment, mockCheckoutConfig } from './mock.js';
-import { paddleCheckoutConfig, parsePaddleWebhook, planForPaddlePrice, updatePaddleSubscription } from './paddle.js';
+import { paddleApiKeyReady, paddleCheckoutConfig, paddleWebhookReady, parsePaddleWebhook, planForPaddlePrice, updatePaddleSubscription } from './paddle.js';
 import { confirmTossPayment, tossCheckoutConfig } from './toss.js';
 
 export function paymentCheckoutConfig(env, planId) {
@@ -28,4 +28,12 @@ export function planForPaymentPrice(env, priceId) {
 export async function updatePaymentSubscription(env, input) {
   if (env.PAYMENT_PROVIDER === 'paddle') return updatePaddleSubscription(env, input);
   throw new Error('PAYMENT_SUBSCRIPTION_UPDATE_NOT_SUPPORTED');
+}
+
+export function paymentSubscriptionUpdateReady(env) {
+  return env.PAYMENT_PROVIDER === 'paddle' && paddleApiKeyReady(env);
+}
+
+export function paymentWebhookReady(env) {
+  return env.PAYMENT_PROVIDER === 'paddle' && paddleWebhookReady(env);
 }

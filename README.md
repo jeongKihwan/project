@@ -11,15 +11,15 @@ npm run dev
 
 ## 현재 결제 모드
 
-Cloudflare 운영 환경은 Paddle provider를 사용합니다. `PADDLE_MODE=sandbox`에서는 실제 청구 없이 전체 결제 흐름을 검증합니다. Paddle 승인 후 라이브 client-side token, 라이브 price ID, 라이브 webhook secret과 `PADDLE_MODE=live`를 함께 적용하면 실결제가 활성화됩니다. 카드번호와 CVC는 Paddle만 처리하며 이 서버에 저장하지 않습니다.
+Cloudflare 운영 환경은 Paddle Live provider를 사용합니다. `PADDLE_MODE=live`와 Live client-side token, API key, Price ID, Webhook secret을 함께 사용하며 카드번호와 CVC는 Paddle만 처리하고 이 서버에 저장하지 않습니다.
 
 플랜은 FREE 1회, Starter 월 10회, Growth 월 50회, Pro 월 100회입니다. FREE 결과는 서버에서 미리보기만 반환하며 전체 분석 JSON은 한 번만 DB에 저장합니다. 서명된 Paddle 구독 웹훅으로 유료 플랜이 활성화되면 기존 분석을 다시 실행하지 않고 전체 결과를 반환합니다.
 
 필수 Paddle 값이 모두 준비되기 전에는 요금제 버튼이 `결제 승인 대기 중`으로 비활성화됩니다. `/api/config`의 `paymentReady`로 배포 환경의 결제 준비 상태를 확인할 수 있습니다.
 
-Price ID는 `PADDLE_STARTER_PRICE_ID`, `PADDLE_GROWTH_PRICE_ID`, `PADDLE_PRO_PRICE_ID` 개별 Secret 등록을 권장합니다. 기존 `PADDLE_PRICE_IDS` JSON도 호환됩니다.
+Price ID는 `PADDLE_STARTER_PRICE_ID`, `PADDLE_GROWTH_PRICE_ID`, `PADDLE_PRO_PRICE_ID` 개별 Secret만 사용합니다.
 
-기존 유료 구독의 플랜 변경은 새 Checkout을 만들지 않고 `PADDLE_API_KEY`로 Paddle Subscription API를 호출합니다. Sandbox API Key에는 `subscription.write` 권한이 필요하며, DB 플랜과 분석 한도는 서명된 `subscription.updated` Webhook이 도착한 뒤 갱신됩니다.
+기존 유료 구독의 플랜 변경은 새 Checkout을 만들지 않고 Live `PADDLE_API_KEY`로 Paddle Subscription API를 호출합니다. API Key에는 `subscription.write` 권한이 필요하며, DB 플랜과 분석 한도는 서명된 `subscription.updated` Webhook이 도착한 뒤 갱신됩니다.
 
 ## 테스트
 

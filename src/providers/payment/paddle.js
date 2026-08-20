@@ -6,20 +6,11 @@ function hexToBytes(value) {
 }
 
 function priceMap(env) {
-  const individual = {
+  return {
     starter: String(env.PADDLE_STARTER_PRICE_ID || ''),
     growth: String(env.PADDLE_GROWTH_PRICE_ID || ''),
     pro: String(env.PADDLE_PRO_PRICE_ID || ''),
   };
-  try {
-    const parsed = JSON.parse(env.PADDLE_PRICE_IDS || '{}');
-    const legacy = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-    const overrides = Object.fromEntries(Object.entries(individual).filter(([, value]) => value));
-    return { ...legacy, ...overrides };
-  } catch {
-    if (Object.values(individual).some(Boolean)) return individual;
-    throw new Error('PADDLE_PRICE_MAP_INVALID');
-  }
 }
 
 export function planForPaddlePrice(env, priceId) {
@@ -28,7 +19,7 @@ export function planForPaddlePrice(env, priceId) {
 }
 
 export function paddleCheckoutConfig(env, planId) {
-  const mode = env.PADDLE_MODE || 'sandbox';
+  const mode = String(env.PADDLE_MODE || '');
   const clientToken = String(env.PADDLE_CLIENT_TOKEN || '');
   if (!['sandbox', 'live'].includes(mode)) throw new Error('PADDLE_MODE_INVALID');
   if (!clientToken) throw new Error('PADDLE_CLIENT_TOKEN_MISSING');
@@ -39,6 +30,18 @@ export function paddleCheckoutConfig(env, planId) {
   return { clientToken, mode, priceId };
 }
 
+export function paddleApiKeyReady(env) {
+  const mode = String(env.PADDLE_MODE || '');
+  const apiKey = String(env.PADDLE_API_KEY || '').trim();
+  if (mode === 'sandbox') return apiKey.includes('_sdbx_');
+  if (mode === 'live') return apiKey.includes('_live_');
+  return false;
+}
+
+export function paddleWebhookReady(env) {
+  return String(env.PADDLE_WEBHOOK_SECRET || '').trim().startsWith('pdl_ntfset_');
+}
+
 export async function updatePaddleSubscription(env, { subscriptionId, priceId, prorationBillingMode }) {
   if (!/^sub_[a-z0-9]{26}$/.test(subscriptionId || '')) throw new Error('PADDLE_SUBSCRIPTION_ID_INVALID');
   if (!/^pri_[a-z0-9]{26}$/.test(priceId || '')) throw new Error('PADDLE_PRICE_ID_MISSING');
@@ -46,9 +49,9 @@ export async function updatePaddleSubscription(env, { subscriptionId, priceId, p
   if (!allowedModes.has(prorationBillingMode)) throw new Error('PADDLE_PRORATION_MODE_INVALID');
   const apiKey = String(env.PADDLE_API_KEY || '').trim();
   if (!apiKey) throw new Error('PADDLE_API_KEY_MISSING');
-  const mode = env.PADDLE_MODE || 'sandbox';
-  if (mode === 'sandbox' && !apiKey.includes('_sdbx_')) throw new Error('PADDLE_API_KEY_MODE_MISMATCH');
+  const mode = String(env.PADDLE_MODE || '');
   if (mode !== 'sandbox' && mode !== 'live') throw new Error('PADDLE_MODE_INVALID');
+  if (!paddleApiKeyReady(env)) throw new Error('PADDLE_API_KEY_MODE_MISMATCH');
   const baseUrl = mode === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
   const response = await fetch(`${baseUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
     method: 'PATCH',
@@ -67,7 +70,7 @@ export async function updatePaddleSubscription(env, { subscriptionId, priceId, p
 export async function parsePaddleWebhook(request, env) {
   const webhookSecret = String(env.PADDLE_WEBHOOK_SECRET || '').trim();
   if (!webhookSecret) throw new Error('PADDLE_WEBHOOK_SECRET_MISSING');
-  if (env.PADDLE_MODE === 'sandbox' && !webhookSecret.startsWith('pdl_ntfset_')) throw new Error('PADDLE_WEBHOOK_SECRET_FORMAT_INVALID');
+  if (!paddleWebhookReady(env)) throw new Error('PADDLE_WEBHOOK_SECRET_FORMAT_INVALID');
   const rawBody = await request.text();
   const signatureHeader = request.headers.get('Paddle-Signature') || '';
   if (!signatureHeader) throw new Error('PADDLE_WEBHOOK_SIGNATURE_MISSING');

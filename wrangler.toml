@@ -5,7 +5,7 @@ keep_vars = true
 
 [vars]
 PAYMENT_PROVIDER = "paddle"
-PADDLE_MODE = "sandbox"
+PADDLE_MODE = "live"
 PADDLE_PRORATION_BILLING_MODE = "prorated_immediately"
 ENVIRONMENT = "production"
 

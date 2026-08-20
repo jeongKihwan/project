@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { paddleCheckoutConfig, parsePaddleWebhook, updatePaddleSubscription } from '../src/providers/payment/paddle.js';
+import { paddleCheckoutConfig, paddleWebhookReady, parsePaddleWebhook, updatePaddleSubscription } from '../src/providers/payment/paddle.js';
 import { applyPaymentWebhook } from '../src/subscriptions.js';
 
 const encoder = new TextEncoder();
 const priceId = `pri_${'a'.repeat(26)}`;
 
-async function signedRequest(body, secret = 'webhook-secret') {
+async function signedRequest(body, secret = 'pdl_ntfset_webhook-secret') {
   const timestamp = Math.floor(Date.now() / 1000);
   const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(`${timestamp}:${body}`));
@@ -15,7 +15,7 @@ async function signedRequest(body, secret = 'webhook-secret') {
 }
 
 test('sandbox checkout config accepts matching token and price', () => {
-  const config = paddleCheckoutConfig({ PADDLE_MODE: 'sandbox', PADDLE_CLIENT_TOKEN: 'test_client_token', PADDLE_PRICE_IDS: JSON.stringify({ starter: priceId }) }, 'starter');
+  const config = paddleCheckoutConfig({ PADDLE_MODE: 'sandbox', PADDLE_CLIENT_TOKEN: 'test_client_token', PADDLE_STARTER_PRICE_ID: priceId }, 'starter');
   assert.deepEqual(config, { clientToken: 'test_client_token', mode: 'sandbox', priceId });
 });
 
@@ -33,7 +33,19 @@ test('sandbox checkout config accepts individual plan price secrets', () => {
 });
 
 test('sandbox checkout config rejects live token', () => {
-  assert.throws(() => paddleCheckoutConfig({ PADDLE_MODE: 'sandbox', PADDLE_CLIENT_TOKEN: 'live_client_token', PADDLE_PRICE_IDS: JSON.stringify({ starter: priceId }) }, 'starter'), /PADDLE_MODE_MISMATCH/);
+  assert.throws(() => paddleCheckoutConfig({ PADDLE_MODE: 'sandbox', PADDLE_CLIENT_TOKEN: 'live_client_token', PADDLE_STARTER_PRICE_ID: priceId }, 'starter'), /PADDLE_MODE_MISMATCH/);
+});
+
+test('live checkout requires explicit mode, live token, and individual price ID', () => {
+  const config = paddleCheckoutConfig({ PADDLE_MODE: 'live', PADDLE_CLIENT_TOKEN: 'live_client_token', PADDLE_STARTER_PRICE_ID: priceId }, 'starter');
+  assert.deepEqual(config, { clientToken: 'live_client_token', mode: 'live', priceId });
+  assert.throws(() => paddleCheckoutConfig({ PADDLE_CLIENT_TOKEN: 'live_client_token', PADDLE_STARTER_PRICE_ID: priceId }, 'starter'), /PADDLE_MODE_INVALID/);
+  assert.throws(() => paddleCheckoutConfig({ PADDLE_MODE: 'live', PADDLE_CLIENT_TOKEN: 'live_client_token', PADDLE_PRICE_IDS: JSON.stringify({ starter: priceId }) }, 'starter'), /PADDLE_PRICE_ID_MISSING/);
+});
+
+test('webhook readiness accepts only a Paddle notification destination secret', () => {
+  assert.equal(paddleWebhookReady({ PADDLE_WEBHOOK_SECRET: 'pdl_ntfset_live-secret' }), true);
+  assert.equal(paddleWebhookReady({ PADDLE_WEBHOOK_SECRET: 'test-secret' }), false);
 });
 
 test('paid plan change replaces the existing Sandbox subscription price', async () => {
@@ -54,9 +66,24 @@ test('paid plan change replaces the existing Sandbox subscription price', async 
   }
 });
 
+test('paid plan change uses the Live API for a Live API key', async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl;
+  globalThis.fetch = async (url) => {
+    capturedUrl = url;
+    return new Response(JSON.stringify({ data: { id: `sub_${'s'.repeat(26)}`, status: 'active' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    await updatePaddleSubscription({ PADDLE_MODE: 'live', PADDLE_API_KEY: 'pdl_live_apikey_test' }, { subscriptionId: `sub_${'s'.repeat(26)}`, priceId, prorationBillingMode: 'prorated_immediately' });
+    assert.equal(capturedUrl, `https://api.paddle.com/subscriptions/sub_${'s'.repeat(26)}`);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('completed webhook requires valid signature and returns verified fields', async () => {
   const body = JSON.stringify({ event_id: `evt_${'e'.repeat(26)}`, event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, status: 'completed', subscription_id: `sub_${'s'.repeat(26)}`, billing_period: { starts_at: '2026-08-01T00:00:00Z', ends_at: '2026-09-01T00:00:00Z' }, custom_data: { payment_id: 'payment-id', payment_token: 'payment-token' }, items: [{ quantity: 1, price: { id: priceId } }] } });
-  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });
+  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'pdl_ntfset_webhook-secret' });
   assert.equal(event.type, 'completed');
   assert.equal(event.paymentId, 'payment-id');
   assert.equal(event.paymentToken, 'payment-token');
@@ -67,25 +94,25 @@ test('completed webhook requires valid signature and returns verified fields', a
 
 test('webhook accepts harmless whitespace around the destination secret', async () => {
   const body = JSON.stringify({ event_id: `evt_${'w'.repeat(26)}`, event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, status: 'completed', subscription_id: `sub_${'s'.repeat(26)}`, billing_period: { starts_at: '2026-08-01T00:00:00Z', ends_at: '2026-09-01T00:00:00Z' }, custom_data: { payment_id: 'payment-id', payment_token: 'payment-token' }, items: [{ quantity: 1, price: { id: priceId } }] } });
-  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: '  webhook-secret\n' });
+  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: '  pdl_ntfset_webhook-secret\n' });
   assert.equal(event.eventType, 'transaction.completed');
 });
 
 test('webhook distinguishes a missing signature header', async () => {
   const request = new Request('https://example.com/api/webhooks/paddle', { method: 'POST', body: '{}' });
-  await assert.rejects(() => parsePaddleWebhook(request, { PADDLE_WEBHOOK_SECRET: 'webhook-secret' }), /PADDLE_WEBHOOK_SIGNATURE_MISSING/);
+  await assert.rejects(() => parsePaddleWebhook(request, { PADDLE_WEBHOOK_SECRET: 'pdl_ntfset_webhook-secret' }), /PADDLE_WEBHOOK_SIGNATURE_MISSING/);
 });
 
 test('completed webhook exposes a one-time price billing cycle', async () => {
   const body = JSON.stringify({ event_id: `evt_${'o'.repeat(26)}`, event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, status: 'completed', subscription_id: null, billing_period: null, custom_data: { payment_id: 'payment-id', payment_token: 'payment-token' }, items: [{ quantity: 1, price: { id: priceId, billing_cycle: null } }] } });
-  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });
+  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'pdl_ntfset_webhook-secret' });
   assert.equal(event.providerSubscriptionId, '');
   assert.equal(event.items[0].billingCycle, null);
 });
 
 test('subscription update exposes billing period and mapped item', async () => {
   const body = JSON.stringify({ event_id: `evt_${'u'.repeat(26)}`, event_type: 'subscription.updated', data: { id: `sub_${'s'.repeat(26)}`, status: 'active', current_billing_period: { starts_at: '2026-08-01T00:00:00Z', ends_at: '2026-09-01T00:00:00Z' }, scheduled_change: { action: 'cancel' }, items: [{ quantity: 1, price: { id: priceId } }] } });
-  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });
+  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'pdl_ntfset_webhook-secret' });
   assert.equal(event.type, 'subscription');
   assert.equal(event.subscriptionStatus, 'ACTIVE');
   assert.equal(event.cancelAtPeriodEnd, true);
@@ -94,7 +121,7 @@ test('subscription update exposes billing period and mapped item', async () => {
 
 test('subscription proration transaction exposes its origin', async () => {
   const body = JSON.stringify({ event_id: `evt_${'p'.repeat(26)}`, event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, origin: 'subscription_update', status: 'completed', subscription_id: `sub_${'s'.repeat(26)}`, custom_data: {}, items: [{ quantity: 1, price: { id: priceId } }, { quantity: 1, price: { id: priceId } }] } });
-  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'webhook-secret' });
+  const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'pdl_ntfset_webhook-secret' });
   assert.equal(event.origin, 'subscription_update');
   assert.equal(event.items.length, 2);
 });
@@ -115,5 +142,5 @@ test('webhook rejects altered body', async () => {
   const original = JSON.stringify({ event_type: 'transaction.completed', data: { status: 'completed' } });
   const request = await signedRequest(original);
   const altered = new Request(request.url, { method: 'POST', headers: request.headers, body: `${original} ` });
-  await assert.rejects(() => parsePaddleWebhook(altered, { PADDLE_WEBHOOK_SECRET: 'webhook-secret' }), /PADDLE_WEBHOOK_SIGNATURE_MISMATCH/);
+  await assert.rejects(() => parsePaddleWebhook(altered, { PADDLE_WEBHOOK_SECRET: 'pdl_ntfset_webhook-secret' }), /PADDLE_WEBHOOK_SIGNATURE_MISMATCH/);
 });

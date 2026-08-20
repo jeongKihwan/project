@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHmac, randomUUID } from 'node:crypto';
 
 const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:8790';
-const webhookSecret = 'test_webhook_secret';
+const webhookSecret = 'pdl_ntfset_test_webhook_secret';
 const providerId = (prefix) => `${prefix}_${randomUUID().replaceAll('-', '').slice(0, 26)}`;
 const ids = {
   starterPrice: `pri_${'a'.repeat(26)}`,
