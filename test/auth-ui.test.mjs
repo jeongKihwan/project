@@ -17,7 +17,11 @@ test('login validation reports short passwords instead of silently blocking subm
 });
 
 test('logout clears private results and rerenders pricing without the previous plan', () => {
-  assert.match(source, /else \{ \$\('#history-list'\)\.innerHTML = ''; \$\('#result'\)\.classList\.add\('hidden'\); \} await loadPlans\(\); bindActions\(\);/);
+  assert.match(source, /state\.billing=null/);
+  assert.match(source, /\$\('#history-list'\)\.innerHTML = ''/);
+  assert.match(source, /\$\('#billing-content'\)\.innerHTML=''/);
+  assert.match(source, /\$\('#result'\)\.classList\.add\('hidden'\)/);
+  assert.match(source, /await loadPlans\(\); bindActions\(\);/);
   assert.match(source, /await refreshMe\(\); location\.hash = 'home'; toast\('로그아웃했습니다\.'\)/);
 });
 

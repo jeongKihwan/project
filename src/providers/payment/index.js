@@ -1,5 +1,5 @@
 import { confirmMockPayment, mockCheckoutConfig } from './mock.js';
-import { paddleApiKeyReady, paddleCheckoutConfig, paddleLiveStatus, paddleWebhookReady, parsePaddleWebhook, planForPaddlePrice, updatePaddleSubscription } from './paddle.js';
+import { cancelPaddleSubscription, clearPaddleScheduledChange, createPaddleRefund, paddleApiKeyReady, paddleCheckoutConfig, paddleLiveStatus, paddleWebhookReady, parsePaddleWebhook, planForPaddlePrice, updatePaddleSubscription } from './paddle.js';
 import { confirmTossPayment, tossCheckoutConfig } from './toss.js';
 
 export function paymentCheckoutConfig(env, planId) {
@@ -28,6 +28,21 @@ export function planForPaymentPrice(env, priceId) {
 export async function updatePaymentSubscription(env, input) {
   if (env.PAYMENT_PROVIDER === 'paddle') return updatePaddleSubscription(env, input);
   throw new Error('PAYMENT_SUBSCRIPTION_UPDATE_NOT_SUPPORTED');
+}
+
+export async function clearPaymentScheduledChange(env, input) {
+  if (env.PAYMENT_PROVIDER === 'paddle') return clearPaddleScheduledChange(env, input);
+  throw new Error('PAYMENT_SUBSCRIPTION_UPDATE_NOT_SUPPORTED');
+}
+
+export async function cancelPaymentSubscription(env, input) {
+  if (env.PAYMENT_PROVIDER === 'paddle') return cancelPaddleSubscription(env, input);
+  throw new Error('PAYMENT_SUBSCRIPTION_CANCEL_NOT_SUPPORTED');
+}
+
+export async function createPaymentRefund(env, input) {
+  if (env.PAYMENT_PROVIDER === 'paddle') return createPaddleRefund(env, input);
+  throw new Error('PAYMENT_REFUND_NOT_SUPPORTED');
 }
 
 export function paymentSubscriptionUpdateReady(env) {

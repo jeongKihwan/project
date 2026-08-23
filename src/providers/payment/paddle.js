@@ -54,29 +54,73 @@ export function paddleLiveStatus(env) {
   };
 }
 
+function paddleApiConfig(env) {
+  const apiKey = String(env.PADDLE_API_KEY || '').trim();
+  const mode = String(env.PADDLE_MODE || '');
+  if (!apiKey) throw new Error('PADDLE_API_KEY_MISSING');
+  if (mode !== 'sandbox' && mode !== 'live') throw new Error('PADDLE_MODE_INVALID');
+  if (!paddleApiKeyReady(env)) throw new Error('PADDLE_API_KEY_MODE_MISMATCH');
+  return { apiKey, baseUrl: mode === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com' };
+}
+
+async function paddleApiRequest(env, path, options) {
+  const { apiKey, baseUrl } = paddleApiConfig(env);
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...options,
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', ...(options.headers || {}) },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const providerCode = String(payload.error?.code || 'request_failed').replace(/[^a-z0-9_]/gi, '_').toUpperCase();
+    throw new Error(`PADDLE_API_${providerCode}`);
+  }
+  return payload.data;
+}
+
 export async function updatePaddleSubscription(env, { subscriptionId, priceId, prorationBillingMode }) {
   if (!/^sub_[a-z0-9]{26}$/.test(subscriptionId || '')) throw new Error('PADDLE_SUBSCRIPTION_ID_INVALID');
   if (!/^pri_[a-z0-9]{26}$/.test(priceId || '')) throw new Error('PADDLE_PRICE_ID_MISSING');
   const allowedModes = new Set(['prorated_immediately', 'prorated_next_billing_period', 'full_immediately', 'full_next_billing_period', 'do_not_bill']);
   if (!allowedModes.has(prorationBillingMode)) throw new Error('PADDLE_PRORATION_MODE_INVALID');
-  const apiKey = String(env.PADDLE_API_KEY || '').trim();
-  if (!apiKey) throw new Error('PADDLE_API_KEY_MISSING');
-  const mode = String(env.PADDLE_MODE || '');
-  if (mode !== 'sandbox' && mode !== 'live') throw new Error('PADDLE_MODE_INVALID');
-  if (!paddleApiKeyReady(env)) throw new Error('PADDLE_API_KEY_MODE_MISMATCH');
-  const baseUrl = mode === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
-  const response = await fetch(`${baseUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+  const data = await paddleApiRequest(env, `/subscriptions/${encodeURIComponent(subscriptionId)}`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ items: [{ price_id: priceId, quantity: 1 }], proration_billing_mode: prorationBillingMode, on_payment_failure: 'prevent_change' }),
   });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const providerCode = String(payload.error?.code || 'request_failed').replace(/[^a-z0-9_]/gi, '_').toUpperCase();
-    throw new Error(`PADDLE_SUBSCRIPTION_UPDATE_${providerCode}`);
-  }
-  if (payload.data?.id !== subscriptionId) throw new Error('PADDLE_SUBSCRIPTION_UPDATE_RESPONSE_INVALID');
-  return { subscriptionId: payload.data.id, status: String(payload.data.status || '').toUpperCase(), priceId, prorationBillingMode };
+  if (data?.id !== subscriptionId) throw new Error('PADDLE_SUBSCRIPTION_UPDATE_RESPONSE_INVALID');
+  return { subscriptionId: data.id, status: String(data.status || '').toUpperCase(), priceId, prorationBillingMode };
+}
+
+export async function clearPaddleScheduledChange(env, { subscriptionId }) {
+  if (!/^sub_[a-z0-9]{26}$/.test(subscriptionId || '')) throw new Error('PADDLE_SUBSCRIPTION_ID_INVALID');
+  const data = await paddleApiRequest(env, `/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ scheduled_change: null }),
+  });
+  if (data?.id !== subscriptionId) throw new Error('PADDLE_SUBSCRIPTION_UPDATE_RESPONSE_INVALID');
+  return { subscriptionId: data.id, status: String(data.status || '').toUpperCase() };
+}
+
+export async function cancelPaddleSubscription(env, { subscriptionId, effectiveFrom = 'next_billing_period' }) {
+  if (!/^sub_[a-z0-9]{26}$/.test(subscriptionId || '')) throw new Error('PADDLE_SUBSCRIPTION_ID_INVALID');
+  if (!['next_billing_period', 'immediately'].includes(effectiveFrom)) throw new Error('PADDLE_CANCEL_EFFECTIVE_FROM_INVALID');
+  const data = await paddleApiRequest(env, `/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ effective_from: effectiveFrom }),
+  });
+  if (data?.id !== subscriptionId) throw new Error('PADDLE_SUBSCRIPTION_CANCEL_RESPONSE_INVALID');
+  return { subscriptionId: data.id, status: String(data.status || '').toUpperCase(), effectiveFrom };
+}
+
+export async function createPaddleRefund(env, { transactionId, reason }) {
+  if (!/^txn_[a-z0-9]{26}$/.test(transactionId || '')) throw new Error('PADDLE_TRANSACTION_ID_INVALID');
+  const safeReason = String(reason || '').trim().slice(0, 500);
+  if (!safeReason) throw new Error('PADDLE_REFUND_REASON_REQUIRED');
+  const data = await paddleApiRequest(env, '/adjustments', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'refund', type: 'full', transaction_id: transactionId, reason: safeReason }),
+  });
+  if (!/^adj_[a-z0-9]{26}$/.test(data?.id || '') || data.transaction_id !== transactionId || data.action !== 'refund') throw new Error('PADDLE_REFUND_RESPONSE_INVALID');
+  return { adjustmentId: data.id, transactionId, status: String(data.status || '').toUpperCase() };
 }
 
 export async function parsePaddleWebhook(request, env) {
@@ -137,6 +181,17 @@ export async function parsePaddleWebhook(request, env) {
       providerSubscriptionId: String(event.data?.id || ''),
       subscriptionStatus: String(event.data?.status || '').toUpperCase(),
       cancelAtPeriodEnd: event.data?.scheduled_change?.action === 'cancel',
+    };
+  }
+  if (String(event.event_type || '').startsWith('adjustment.')) {
+    return {
+      ...common,
+      type: 'adjustment',
+      adjustmentId: String(event.data?.id || ''),
+      adjustmentAction: String(event.data?.action || ''),
+      adjustmentStatus: String(event.data?.status || '').toUpperCase(),
+      providerPaymentId: String(event.data?.transaction_id || ''),
+      providerSubscriptionId: String(event.data?.subscription_id || ''),
     };
   }
   return { ...common, type: 'ignored' };

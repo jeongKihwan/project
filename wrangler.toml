@@ -7,6 +7,7 @@ keep_vars = true
 PAYMENT_PROVIDER = "paddle"
 PADDLE_MODE = "live"
 PADDLE_PRORATION_BILLING_MODE = "prorated_immediately"
+PADDLE_REFUND_WINDOW_DAYS = "14"
 ENVIRONMENT = "production"
 
 [assets]

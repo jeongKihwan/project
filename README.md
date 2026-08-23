@@ -19,7 +19,9 @@ Cloudflare 운영 환경은 Paddle Live provider를 사용합니다. `PADDLE_MOD
 
 Price ID는 `PADDLE_STARTER_PRICE_ID`, `PADDLE_GROWTH_PRICE_ID`, `PADDLE_PRO_PRICE_ID` 개별 Secret만 사용합니다.
 
-기존 유료 구독의 플랜 변경은 새 Checkout을 만들지 않고 Live `PADDLE_API_KEY`로 Paddle Subscription API를 호출합니다. API Key에는 `subscription.write` 권한이 필요하며, DB 플랜과 분석 한도는 서명된 `subscription.updated` Webhook이 도착한 뒤 갱신됩니다.
+기존 유료 구독의 플랜 변경은 새 Checkout을 만들지 않고 Live `PADDLE_API_KEY`로 Paddle Subscription API를 호출합니다. 구독 취소는 다음 결제일부터 적용하며, 취소 예약 철회도 지원합니다. API Key에는 `subscription.write` 권한이 필요하며, DB 플랜과 분석 한도는 서명된 `subscription.updated` Webhook이 도착한 뒤 갱신됩니다.
+
+전체 환불 요청은 본인 소유의 최근 Paddle 결제만 대상으로 하며, 먼저 구독 취소를 예약해야 합니다. 기본 자동 요청 기간은 결제 후 14일이고 `PADDLE_REFUND_WINDOW_DAYS`로 변경할 수 있습니다. API Key에 `adjustment.write` 권한이 필요합니다. Paddle 알림 대상에는 `adjustment.created`, `adjustment.updated`를 추가해야 환불 승인·거절 상태가 DB에 반영됩니다.
 
 ## 테스트
 

@@ -256,6 +256,20 @@ dialog::backdrop { background: rgba(15,23,42,.58); backdrop-filter: blur(3px); }
 .locked-upgrade h3 { font: 800 20px 'Inter','Noto Sans KR'; }
 .locked-upgrade p { color: #dbeafe; }
 .locked-upgrade .primary-button { border-color: #fff; background: #fff; color: var(--brand); box-shadow: none; }
+.billing-management { padding-top: 70px; }
+.billing-content { display: grid; gap: 12px; margin-top: 25px; }
+.billing-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 25px 27px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.billing-current { border-color: #bfdbfe; background: linear-gradient(135deg,#fff,#f8fbff); }
+.billing-card span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .7px; }
+.billing-card h3 { margin: 6px 0 4px; font-size: 20px; }
+.billing-card p { margin: 0; color: var(--muted); font-size: 12px; }
+.billing-actions { display: flex; gap: 8px; }
+.danger-outline,.refund-button { padding: 10px 13px; border-radius: 7px; background: #fff; font-size: 11px; font-weight: 700; }
+.danger-outline { border: 1px solid #fecaca; color: #b91c1c; }
+.refund-button { border: 1px solid var(--line); color: #475569; }
+.danger-outline:disabled,.refund-button:disabled { cursor: not-allowed; opacity: .48; }
+.refund-state { display: flex; justify-content: space-between; gap: 18px; padding: 14px 17px; border-radius: 9px; background: #f8fafc; color: #64748b; font-size: 11px; }
+.refund-state b { color: #334155; }
 
 @media (max-width: 980px) {
   .hero { grid-template-columns: 1fr; gap: 48px; }
@@ -310,6 +324,10 @@ dialog::backdrop { background: rgba(15,23,42,.58); backdrop-filter: blur(3px); }
   .file-summary .primary-button { width: 100%; margin: 12px 0 0; }
   .steps, .plan-grid { grid-template-columns: 1fr; }
   .billing-note { align-items: flex-start; }
+  .billing-card { align-items: flex-start; flex-direction: column; padding: 20px; }
+  .billing-actions { width: 100%; flex-direction: column; }
+  .billing-actions button,.refund-button { width: 100%; }
+  .refund-state { flex-direction: column; gap: 4px; }
   .plan-card { min-height: auto; }
   .plan-trust { align-items: center; flex-direction: column; gap: 6px; }
   footer { align-items: flex-start; flex-wrap: wrap; }

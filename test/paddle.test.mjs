@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { paddleCheckoutConfig, paddleLiveStatus, paddleWebhookReady, parsePaddleWebhook, updatePaddleSubscription } from '../src/providers/payment/paddle.js';
+import { cancelPaddleSubscription, clearPaddleScheduledChange, createPaddleRefund, paddleCheckoutConfig, paddleLiveStatus, paddleWebhookReady, parsePaddleWebhook, updatePaddleSubscription } from '../src/providers/payment/paddle.js';
 import { applyPaymentWebhook } from '../src/subscriptions.js';
 
 const encoder = new TextEncoder();
@@ -93,6 +93,38 @@ test('paid plan change uses the Live API for a Live API key', async () => {
   }
 });
 
+test('subscription cancellation is scheduled at the next billing period', async () => {
+  const originalFetch = globalThis.fetch;
+  let captured;
+  const subscriptionId = `sub_${'s'.repeat(26)}`;
+  globalThis.fetch = async (url, options) => { captured={url,options};return new Response(JSON.stringify({data:{id:subscriptionId,status:'active'}}),{status:200,headers:{'Content-Type':'application/json'}}); };
+  try {
+    const result=await cancelPaddleSubscription({PADDLE_MODE:'live',PADDLE_API_KEY:'pdl_live_apikey_test'},{subscriptionId});
+    assert.equal(captured.url,`https://api.paddle.com/subscriptions/${subscriptionId}/cancel`);
+    assert.equal(captured.options.method,'POST');
+    assert.deepEqual(JSON.parse(captured.options.body),{effective_from:'next_billing_period'});
+    assert.equal(result.effectiveFrom,'next_billing_period');
+  } finally { globalThis.fetch=originalFetch; }
+});
+
+test('scheduled cancellation can be cleared before a plan change', async () => {
+  const originalFetch=globalThis.fetch;
+  let body;
+  const subscriptionId=`sub_${'r'.repeat(26)}`;
+  globalThis.fetch=async (_url,options)=>{body=JSON.parse(options.body);return new Response(JSON.stringify({data:{id:subscriptionId,status:'active'}}),{status:200,headers:{'Content-Type':'application/json'}});};
+  try { await clearPaddleScheduledChange({PADDLE_MODE:'sandbox',PADDLE_API_KEY:'pdl_sdbx_apikey_test'},{subscriptionId});assert.deepEqual(body,{scheduled_change:null}); }
+  finally { globalThis.fetch=originalFetch; }
+});
+
+test('full refund creates a Paddle adjustment for the owned transaction', async () => {
+  const originalFetch=globalThis.fetch;
+  let captured;
+  const transactionId=`txn_${'t'.repeat(26)}`,adjustmentId=`adj_${'a'.repeat(26)}`;
+  globalThis.fetch=async (url,options)=>{captured={url,options};return new Response(JSON.stringify({data:{id:adjustmentId,action:'refund',transaction_id:transactionId,status:'pending_approval'}}),{status:201,headers:{'Content-Type':'application/json'}});};
+  try { const result=await createPaddleRefund({PADDLE_MODE:'live',PADDLE_API_KEY:'pdl_live_apikey_test'},{transactionId,reason:'customer request'});assert.equal(captured.url,'https://api.paddle.com/adjustments');assert.deepEqual(JSON.parse(captured.options.body),{action:'refund',type:'full',transaction_id:transactionId,reason:'customer request'});assert.equal(result.status,'PENDING_APPROVAL'); }
+  finally { globalThis.fetch=originalFetch; }
+});
+
 test('completed webhook requires valid signature and returns verified fields', async () => {
   const body = JSON.stringify({ event_id: `evt_${'e'.repeat(26)}`, event_type: 'transaction.completed', data: { id: `txn_${'b'.repeat(26)}`, status: 'completed', subscription_id: `sub_${'s'.repeat(26)}`, billing_period: { starts_at: '2026-08-01T00:00:00Z', ends_at: '2026-09-01T00:00:00Z' }, custom_data: { payment_id: 'payment-id', payment_token: 'payment-token' }, items: [{ quantity: 1, price: { id: priceId } }] } });
   const event = await parsePaddleWebhook(await signedRequest(body), { PADDLE_WEBHOOK_SECRET: 'pdl_ntfset_webhook-secret' });
@@ -129,6 +161,15 @@ test('subscription update exposes billing period and mapped item', async () => {
   assert.equal(event.subscriptionStatus, 'ACTIVE');
   assert.equal(event.cancelAtPeriodEnd, true);
   assert.equal(event.items[0].priceId, priceId);
+});
+
+test('refund adjustment webhook exposes approval state and transaction link', async () => {
+  const transactionId=`txn_${'t'.repeat(26)}`,adjustmentId=`adj_${'a'.repeat(26)}`;
+  const body=JSON.stringify({event_id:`evt_${'j'.repeat(26)}`,event_type:'adjustment.updated',data:{id:adjustmentId,action:'refund',status:'approved',transaction_id:transactionId,subscription_id:`sub_${'s'.repeat(26)}`,items:[]}});
+  const event=await parsePaddleWebhook(await signedRequest(body),{PADDLE_WEBHOOK_SECRET:'pdl_ntfset_webhook-secret'});
+  assert.equal(event.type,'adjustment');
+  assert.equal(event.adjustmentStatus,'APPROVED');
+  assert.equal(event.providerPaymentId,transactionId);
 });
 
 test('subscription proration transaction exposes its origin', async () => {
