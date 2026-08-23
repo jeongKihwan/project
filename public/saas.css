@@ -249,6 +249,8 @@ dialog::backdrop { background: rgba(15,23,42,.58); backdrop-filter: blur(3px); }
   .brand { font-size: 14px; }
   .brand-mark { width: 29px; height: 29px; }
   #nav-auth .text-button { display: none; }
+  #nav-auth .nav-logout { display: inline-flex; margin-right: 4px; padding: 8px 6px; font-size: 10px; }
+  #nav-auth .member-email { display: none; }
   .nav-cta { padding: 9px 11px; font-size: 11px; }
   .section { padding: 68px 18px; }
   .hero { min-height: auto; padding-top: 58px; padding-bottom: 58px; }

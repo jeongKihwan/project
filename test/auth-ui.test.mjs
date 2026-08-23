@@ -25,3 +25,10 @@ test('anonymous history navigation opens the login dialog', () => {
   assert.match(source, /a\[href="#history"\]/);
   assert.match(source, /if \(state\.user\) return; event\.preventDefault\(\); renderAuth\('login'\); \$\('#auth-dialog'\)\.showModal\(\)/);
 });
+
+test('signed-in navigation exposes a working logout action', () => {
+  assert.match(source, /class="text-button nav-logout" data-logout>로그아웃/);
+  assert.match(source, /document\.querySelectorAll\('\[data-logout\]'\)/);
+  assert.match(source, /async function logout\(\) \{ await api\('\/api\/auth\/logout'/);
+  assert.match(source, /\$\('#logout-button'\)\.onclick = logout/);
+});
