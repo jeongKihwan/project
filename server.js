@@ -40,7 +40,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS user_consents (user_id INTEGER NOT NULL, consent_id TEXT NOT NULL, version TEXT NOT NULL, agreed_at TEXT NOT NULL, PRIMARY KEY(user_id, consent_id), FOREIGN KEY(user_id) REFERENCES users(id));
 `);
 const seed = db.prepare('INSERT OR IGNORE INTO plans (id, name, price, credits) VALUES (?, ?, ?, ?)');
-seed.run('starter', '스타터', 9900, 10); seed.run('growth', '그로스', 29000, 40); seed.run('pro', '프로', 59000, 100);
+seed.run('starter', '스타터', 9900, 10); seed.run('growth', '그로스', 29000, 40); seed.run('pro', '프로', 59000, 120);
 db.prepare('INSERT OR IGNORE INTO consent_versions (id, version, content) VALUES (?, ?, ?)').run('terms', '2026-08-16', '서비스 이용약관');
 db.prepare('INSERT OR IGNORE INTO consent_versions (id, version, content) VALUES (?, ?, ?)').run('privacy', '2026-08-16', '개인정보 처리방침');
 

@@ -17,6 +17,8 @@
     "db:migrate:subscription-order:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0004_subscription_event_order.sql",
     "db:migrate:billing-lifecycle:local": "wrangler d1 execute review-insight-db --local --file=./migrations/0006_billing_lifecycle.sql",
     "db:migrate:billing-lifecycle:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0006_billing_lifecycle.sql",
+    "db:migrate:pro-limit:local": "wrangler d1 execute review-insight-db --local --file=./migrations/0007_pro_limit_120.sql",
+    "db:migrate:pro-limit:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0007_pro_limit_120.sql",
     "db:migrate:plan-catalog:local": "wrangler d1 execute review-insight-db --local --file=./migrations/0005_plan_catalog.sql",
     "db:migrate:plan-catalog:remote": "wrangler d1 execute review-insight-db --remote --file=./migrations/0005_plan_catalog.sql",
     "dev:local": "node server.js"
