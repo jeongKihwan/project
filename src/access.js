@@ -62,6 +62,7 @@ export function previewResult(result) {
   const anxietyRemovers = result.pageCopy?.anxietyRemovers || [];
   const priorities = result.priorities || (result.purchasePoints || []).map((item, index) => ({ rank: index + 1, title: item.title, expectedEffect: item.reason, basis: item.reason, evidence: item.evidence || [] }));
   return {
+    context: result.context || { businessType: 'seller', sourceType: 'upload' },
     totalReviews: result.totalReviews,
     analyzedReviews: result.analyzedReviews,
     summary: result.summary,

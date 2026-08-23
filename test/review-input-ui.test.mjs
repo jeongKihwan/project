@@ -21,14 +21,30 @@ test('XLSX parser is vendored and loaded before the existing app', async () => {
 
 test('file input auto-detects review columns with a manual fallback', () => {
   assert.match(app, /function reviewColumnIndex\(headers\)/);
-  assert.match(app, /state\.pendingTable=\{rows:table\.slice\(1\),headers,fileName,typeLabel\}/);
+  assert.match(app, /state\.pendingTable=\{rows:table\.slice\(1\),headers,fileName,typeLabel,columns\}/);
   assert.match(app, /id="review-column-select"|#review-column-select/);
   assert.match(app, /#confirm-column-button/);
 });
 
 test('all input modes normalize to the existing comment CSV analysis request', () => {
   assert.match(app, /function cleanReviews\(values\) \{ const seen=new Set\(\)/);
-  assert.match(app, /function reviewsToCsv\(reviews\) \{ return `댓글/);
+  assert.match(app, /function recordsToCsv\(records\) \{ return `댓글,별점,작성일,상품명/);
   assert.match(app, /value\.split\(\/\\r\?\\n\/\)/);
   assert.match(app, /api\('\/api\/analyses',\{method:'POST',body:JSON\.stringify\(\{fileName:state\.file\.name,csv:state\.csv,requestId:/);
+});
+
+test('Naver SmartStore columns map review metadata with manual review fallback', () => {
+  assert.match(app, /리뷰상세내용/);
+  assert.match(app, /리뷰평점/);
+  assert.match(app, /리뷰등록일/);
+  assert.match(app, /판매상품명/);
+  assert.match(app, /columns=\{\.\.\.pending\.columns,review:index\}/);
+});
+
+test('business context supports SmartStore and Naver Place without crawling', () => {
+  assert.match(app, /sourceType: 'naver_smartstore'/);
+  assert.match(app, /'naver_place':'naver_smartstore'/);
+  assert.match(app, /자동 크롤링은 사용하지 않습니다/);
+  assert.match(app, /businessType:state\.businessType,sourceType:state\.sourceType/);
+  assert.doesNotMatch(app, /crawl|scrape|puppeteer/i);
 });

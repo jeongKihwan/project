@@ -78,11 +78,15 @@ function normalize(raw, reviewMap, totalReviews) {
   };
 }
 
-export async function analyzeWithOpenAI(reviews, env) {
+export async function analyzeWithOpenAI(reviews, env, context = {}) {
   const apiKey = env.OPENAI_API_KEY || env.openai_api_key;
   if (!apiKey) throw new Error('OPENAI_NOT_CONFIGURED');
   const selected = sampleReviews(reviews).map((text, index) => ({ id: `R${index + 1}`, text: String(text).slice(0, MAX_REVIEW_LENGTH) }));
   const reviewMap = new Map(selected.map((review) => [review.id, review.text]));
+  const localBusiness = ['restaurant', 'cafe', 'beauty', 'local'].includes(context.businessType);
+  const businessInstruction = localBusiness
+    ? '분석 대상은 네이버 플레이스 기반 자영업 매장이다. strengths는 고객 만족 포인트, weaknesses는 주요 불만, priorities는 매장·서비스 개선 우선순위, pageCopy는 과장 없는 홍보 문구로 작성한다.'
+    : '분석 대상은 네이버 스마트스토어 기반 온라인 상품이다. strengths는 구매 만족 포인트, priorities는 상품 개선 우선순위, pageCopy는 상세페이지 문구로 작성한다.';
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -93,6 +97,7 @@ export async function analyzeWithOpenAI(reviews, env) {
       reasoning: { effort: 'low' },
       instructions: [
         '당신은 한국어 고객 리뷰 분석가다.',
+        businessInstruction,
         '오직 제공된 개인정보 마스킹 완료 리뷰만 근거로 사용한다.',
         '리뷰에 없는 제품 사실, 효능, 수치, 인증, 과장 표현을 절대 만들지 않는다.',
         '모든 요약, 장점, 단점, 개선 우선순위, 상세페이지 문구, FAQ에 직접 근거가 되는 리뷰 ID를 넣는다.',
