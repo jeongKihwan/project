@@ -120,7 +120,7 @@ nav a:hover { color: var(--brand); }
 .loading-panel > p { margin: 0; color: var(--muted); font-size: 11px; }
 .progress-list li.current { color: var(--brand); }
 
-.how { max-width: none; padding-left: max(28px,calc((100vw - 1144px)/2)); padding-right: max(28px,calc((100vw - 1144px)/2)); background: var(--surface); }
+.how { width: 100%; max-width: none; padding-left: max(28px,calc((100vw - 1144px)/2)); padding-right: max(28px,calc((100vw - 1144px)/2)); background: var(--surface); }
 .section-intro, .plans-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
 .section-intro > p { color: var(--muted); font-size: 13px; }
 .steps { grid-template-columns: repeat(3,1fr); gap: 16px; }
@@ -152,6 +152,11 @@ nav a:hover { color: var(--brand); }
 .plan-card button:disabled { border-color: #e2e8f0; background: #f1f5f9; color: #94a3b8; }
 .plan-card.current button:disabled { border-color: #bfdbfe; background: var(--brand-soft); color: var(--brand); }
 .plan-trust { display: flex; justify-content: center; gap: 24px; margin-top: 25px; color: var(--muted); font-size: 10px; }
+.local-preview-notice { grid-column: 1 / -1; padding: 28px; border: 1px solid #bfdbfe; border-radius: var(--radius); background: var(--brand-soft); text-align: center; }
+.local-preview-notice b, .local-preview-notice span { display: block; }
+.local-preview-notice b { font-size: 15px; }
+.local-preview-notice span { margin: 7px 0 15px; color: var(--muted); font-size: 12px; }
+.local-preview-notice a { display: inline-block; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--brand); color: #fff; text-decoration: none; font-weight: 700; }
 
 footer { padding: 30px max(28px,calc((100vw - 1144px)/2)); background: var(--surface); color: var(--muted); }
 .footer-brand { margin-right: 10px; font-size: 14px; }
@@ -232,7 +237,11 @@ dialog::backdrop { background: rgba(15,23,42,.58); backdrop-filter: blur(3px); }
   .hero { grid-template-columns: 1fr; gap: 48px; }
   .hero-copy { max-width: 700px; }
   .hero-product { width: min(100%, 620px); }
-  .plan-grid { grid-template-columns: repeat(2, 1fr); gap: 24px 14px; }
+  .plan-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .plan-card { min-width: 0; padding: 17px 14px; }
+  .plan-card h3 { font-size: 17px; }
+  .plan-price strong { font-size: 20px; }
+  .plan-card ul { font-size: 10px; }
 }
 
 @media (max-width: 760px) {

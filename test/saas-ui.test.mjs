@@ -26,3 +26,14 @@ test('pricing presentation keeps existing plan actions and adds comparison detai
   assert.match(css, /--brand: #2563eb/);
   assert.match(css, /@media \(max-width: 760px\)/);
 });
+
+test('cross-browser layout keeps HOW IT WORKS full width and four plans visible', () => {
+  assert.match(css, /\.how \{ width: 100%; max-width: none;/);
+  assert.match(css, /@media \(max-width: 980px\)[\s\S]*\.plan-grid \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+});
+
+test('local file preview keeps navigation active and explains missing API plans', () => {
+  assert.match(app, /bindActions\(\);\nloadConfig\(\)/);
+  assert.match(app, /location\.protocol==='file:'/);
+  assert.match(app, /운영 사이트에서 요금제 보기/);
+});
